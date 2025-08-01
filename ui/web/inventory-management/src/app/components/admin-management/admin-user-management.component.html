@@ -1,0 +1,51 @@
+<div class="admin-user-management-container">
+  <h2>User Management</h2>
+
+  <div *ngIf="error" class="error-message">{{ error }}</div>
+  <div *ngIf="success" class="success-message">{{ success }}</div>
+
+  <form [formGroup]="userForm" (ngSubmit)="submit()" class="user-form">
+    <div class="form-row">
+      <input formControlName="email" placeholder="Email" type="email" />
+      <input formControlName="first_name" placeholder="First Name" />
+      <input formControlName="last_name" placeholder="Last Name" />
+      <input formControlName="password" placeholder="Password" type="password" *ngIf="!editingUser" />
+      <select formControlName="role_id">
+        <option value="" disabled>Select Role</option>
+        <option *ngFor="let role of roles" [value]="role.id">{{ role.name }}</option>
+      </select>
+      <label><input type="checkbox" formControlName="is_active" /> Active</label>
+      <label><input type="checkbox" formControlName="is_verified" /> Verified</label>
+    </div>
+    <div class="form-actions">
+      <button type="submit" [disabled]="userForm.invalid || loading">{{ editingUser ? 'Update' : 'Create' }} User</button>
+      <button type="button" (click)="cancelEdit()" *ngIf="editingUser">Cancel</button>
+    </div>
+  </form>
+
+  <table class="user-table">
+    <thead>
+      <tr>
+        <th>Email</th>
+        <th>Name</th>
+        <th>Role</th>
+        <th>Active</th>
+        <th>Verified</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr *ngFor="let user of users">
+        <td>{{ user.email }}</td>
+        <td>{{ user.first_name }} {{ user.last_name }}</td>
+        <td>{{ user.role.name }}</td>
+        <td>{{ user.is_active ? 'Yes' : 'No' }}</td>
+        <td>{{ user.is_verified ? 'Yes' : 'No' }}</td>
+        <td>
+          <button (click)="startEdit(user)">Edit</button>
+          <button (click)="deleteUser(user)">Delete</button>
+        </td>
+      </tr>
+    </tbody>
+  </table>
+</div> 

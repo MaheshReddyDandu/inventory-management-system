@@ -1,0 +1,131 @@
+<div class="dashboard-container">
+  <!-- Header -->
+  <header class="dashboard-header">
+    <div class="header-content">
+      <div class="header-left">
+        <h1 class="dashboard-title">Dashboard</h1>
+        <p class="welcome-text">Welcome back, {{ currentUser?.first_name || 'User' }}!</p>
+      </div>
+      <div class="header-right">
+        <div class="user-info">
+          <span class="user-name">{{ currentUser?.first_name }} {{ currentUser?.last_name }}</span>
+          <span class="user-role">{{ currentUser?.role?.name }}</span>
+        </div>
+        <button class="logout-btn" (click)="logout()">
+          <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M9 21H5C4.46957 21 3.96086 20.7893 3.58579 20.4142C3.21071 20.0391 3 19.5304 3 19V5C3 4.46957 3.21071 3.96086 3.58579 3.58579C3.96086 3.21071 4.46957 3 5 3H9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M16 17L21 12L16 7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M21 12H9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          Logout
+        </button>
+        <button class="change-password-btn" (click)="goToChangePassword()">
+          <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M12 17V21" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M7 21H17" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M12 3V17" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+          Change Password
+        </button>
+        <ng-container *ngIf="currentUser?.role?.name === 'admin'">
+          <button class="admin-btn" (click)="goToAdminUsers()">Admin Users</button>
+          <button class="admin-btn" (click)="goToAdminRoles()">Admin Roles</button>
+        </ng-container>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Content -->
+  <main class="dashboard-main">
+    <div class="dashboard-grid">
+      <!-- Quick Stats -->
+      <div class="stats-section">
+        <h2>Quick Stats</h2>
+        <div class="stats-grid">
+          <div class="stat-card">
+            <div class="stat-icon">📦</div>
+            <div class="stat-content">
+              <div class="stat-number">1,247</div>
+              <div class="stat-label">Total Items</div>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon">💰</div>
+            <div class="stat-content">
+              <div class="stat-number">$45.2K</div>
+              <div class="stat-label">Total Value</div>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon">⚠️</div>
+            <div class="stat-content">
+              <div class="stat-number">23</div>
+              <div class="stat-label">Low Stock</div>
+            </div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-icon">📈</div>
+            <div class="stat-content">
+              <div class="stat-number">+12%</div>
+              <div class="stat-label">Growth</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Recent Activity -->
+      <div class="activity-section">
+        <h2>Recent Activity</h2>
+        <div class="activity-list">
+          <div class="activity-item">
+            <div class="activity-icon">➕</div>
+            <div class="activity-content">
+              <div class="activity-title">New item added</div>
+              <div class="activity-desc">Laptop Chargers - 50 units</div>
+              <div class="activity-time">2 hours ago</div>
+            </div>
+          </div>
+          <div class="activity-item">
+            <div class="activity-icon">📤</div>
+            <div class="activity-content">
+              <div class="activity-title">Item shipped</div>
+              <div class="activity-desc">Office Chairs - 5 units</div>
+              <div class="activity-time">4 hours ago</div>
+            </div>
+          </div>
+          <div class="activity-item">
+            <div class="activity-icon">⚠️</div>
+            <div class="activity-content">
+              <div class="activity-title">Low stock alert</div>
+              <div class="activity-desc">Coffee Beans - 8 units remaining</div>
+              <div class="activity-time">6 hours ago</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Quick Actions -->
+      <div class="actions-section">
+        <h2>Quick Actions</h2>
+        <div class="actions-grid">
+          <button class="action-btn">
+            <span class="action-icon">➕</span>
+            <span class="action-text">Add Item</span>
+          </button>
+          <button class="action-btn">
+            <span class="action-icon">📤</span>
+            <span class="action-text">Ship Item</span>
+          </button>
+          <button class="action-btn">
+            <span class="action-icon">📊</span>
+            <span class="action-text">View Reports</span>
+          </button>
+          <button class="action-btn">
+            <span class="action-icon">⚙️</span>
+            <span class="action-text">Settings</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </main>
+</div> 

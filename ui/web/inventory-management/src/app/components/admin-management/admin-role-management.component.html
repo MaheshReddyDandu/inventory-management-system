@@ -1,0 +1,66 @@
+<div class="admin-role-management-container">
+  <h2>Role Management</h2>
+
+  <div *ngIf="error" class="error-message">{{ error }}</div>
+  <div *ngIf="success" class="success-message">{{ success }}</div>
+
+  <form [formGroup]="roleForm" (ngSubmit)="submit()" class="role-form">
+    <div class="form-row">
+      <input formControlName="name" placeholder="Role Name" />
+      <input formControlName="description" placeholder="Description" />
+      <div class="permissions-dropdown">
+        <label>Permissions</label>
+        <div class="dropdown-box">
+          <div class="dropdown-selected" (click)="showPerms = !showPerms">
+            <ng-container *ngIf="roleForm.value.permissions.length; else noneSelected">
+              <span class="perm-chip" *ngFor="let perm of roleForm.value.permissions">{{ perm }}</span>
+            </ng-container>
+            <ng-template #noneSelected>
+              <span class="perm-placeholder">Select permissions</span>
+            </ng-template>
+            <span class="dropdown-arrow">▼</span>
+          </div>
+          <div class="dropdown-list" *ngIf="showPerms">
+            <label *ngFor="let perm of allPermissions" class="dropdown-item">
+              <input type="checkbox" [checked]="roleForm.value.permissions.includes(perm)" (change)="onPermissionToggle(perm, $event)" />
+              {{ perm }}
+            </label>
+          </div>
+        </div>
+      </div>
+      <label><input type="checkbox" formControlName="is_active" /> Active</label>
+    </div>
+    <div class="form-actions">
+      <button type="submit" [disabled]="roleForm.invalid || loading">{{ editingRole ? 'Update' : 'Create' }} Role</button>
+      <button type="button" (click)="cancelEdit()" *ngIf="editingRole">Cancel</button>
+    </div>
+  </form>
+
+  <table class="role-table">
+    <thead>
+      <tr>
+        <th>Name</th>
+        <th>Description</th>
+        <th>Permissions</th>
+        <th>Active</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr *ngFor="let role of roles">
+        <td>{{ role.name }}</td>
+        <td>{{ role.description }}</td>
+        <td>
+          <ng-container *ngIf="role.permissions">
+            <span class="perm-badge" [ngClass]="'perm-' + perm" *ngFor="let perm of (role.permissions ? (role.permissions | jsonToArray) : [])">{{ perm }}</span>
+          </ng-container>
+        </td>
+        <td>{{ role.is_active !== false ? 'Yes' : 'No' }}</td>
+        <td>
+          <button (click)="startEdit(role)">Edit</button>
+          <button (click)="deleteRole(role)">Delete</button>
+        </td>
+      </tr>
+    </tbody>
+  </table>
+</div> 

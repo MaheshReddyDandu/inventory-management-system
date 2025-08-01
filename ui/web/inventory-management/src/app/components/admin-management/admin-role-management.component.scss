@@ -1,0 +1,254 @@
+.admin-role-management-container {
+  max-width: 900px;
+  margin: 40px auto;
+  background: #fff;
+  border-radius: 18px;
+  box-shadow: 0 8px 32px rgba(102, 126, 234, 0.08);
+  padding: 32px 32px 24px 32px;
+  font-family: 'Inter', sans-serif;
+
+  h2 {
+    font-size: 2rem;
+    font-weight: 700;
+    margin-bottom: 24px;
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .error-message, .success-message {
+    padding: 12px 16px;
+    border-radius: 8px;
+    font-size: 15px;
+    margin-bottom: 18px;
+    display: inline-block;
+  }
+  .error-message {
+    background: #fef2f2;
+    color: #dc2626;
+    border: 1px solid #fecaca;
+  }
+  .success-message {
+    background: #f0fdf4;
+    color: #16a34a;
+    border: 1px solid #bbf7d0;
+  }
+
+  .role-form {
+    margin-bottom: 32px;
+    .form-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 16px;
+      align-items: center;
+      input {
+        padding: 12px 14px;
+        border: 2px solid #e5e7eb;
+        border-radius: 8px;
+        font-size: 15px;
+        min-width: 160px;
+        background: #f9fafb;
+        transition: border 0.2s;
+        &:focus {
+          border-color: #667eea;
+          outline: none;
+        }
+      }
+      label {
+        font-size: 14px;
+        color: #555;
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        margin: 0 8px 0 0;
+      }
+    }
+    .form-actions {
+      margin-top: 18px;
+      display: flex;
+      gap: 12px;
+      button {
+        padding: 10px 22px;
+        border: none;
+        border-radius: 8px;
+        font-weight: 600;
+        font-size: 15px;
+        background: linear-gradient(135deg, #667eea, #764ba2);
+        color: #fff;
+        cursor: pointer;
+        transition: background 0.2s, transform 0.2s;
+        &:hover:not(:disabled) {
+          background: linear-gradient(135deg, #5a67d8, #6b21a8);
+          transform: translateY(-2px);
+        }
+        &:disabled {
+          opacity: 0.6;
+          cursor: not-allowed;
+        }
+      }
+    }
+  }
+
+  .role-table {
+    width: 100%;
+    border-collapse: collapse;
+    background: #f9fafb;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 2px 8px rgba(102, 126, 234, 0.04);
+    th, td {
+      padding: 14px 12px;
+      text-align: left;
+      font-size: 15px;
+    }
+    th {
+      background: #f3f4f6;
+      font-weight: 700;
+      color: #4f46e5;
+      border-bottom: 2px solid #e5e7eb;
+    }
+    tr {
+      transition: background 0.2s;
+      &:hover {
+        background: #eef2ff;
+      }
+    }
+    td {
+      border-bottom: 1px solid #e5e7eb;
+      button {
+        margin-right: 8px;
+        padding: 6px 14px;
+        border: none;
+        border-radius: 6px;
+        font-size: 14px;
+        font-weight: 500;
+        background: #667eea;
+        color: #fff;
+        cursor: pointer;
+        transition: background 0.2s, transform 0.2s;
+        &:hover {
+          background: #5a67d8;
+          transform: translateY(-1px);
+        }
+        &:last-child {
+          background: #ef4444;
+          margin-right: 0;
+          &:hover {
+            background: #dc2626;
+          }
+        }
+      }
+    }
+  }
+
+  .permissions-dropdown {
+    position: relative;
+    min-width: 220px;
+    .dropdown-box {
+      position: relative;
+      width: 100%;
+    }
+    .dropdown-selected {
+      min-height: 44px;
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 6px;
+      background: #f9fafb;
+      border: 2px solid #e5e7eb;
+      border-radius: 8px;
+      padding: 8px 12px;
+      cursor: pointer;
+      transition: border 0.2s;
+      &:hover, &:focus {
+        border-color: #667eea;
+      }
+      .perm-chip {
+        background: #667eea;
+        color: #fff;
+        border-radius: 6px;
+        padding: 2px 10px;
+        font-size: 13px;
+        font-weight: 500;
+        margin-right: 2px;
+        margin-bottom: 2px;
+        display: inline-block;
+      }
+      .perm-placeholder {
+        color: #9ca3af;
+        font-size: 14px;
+      }
+      .dropdown-arrow {
+        margin-left: auto;
+        color: #667eea;
+        font-size: 14px;
+        margin-right: 2px;
+      }
+    }
+    .dropdown-list {
+      position: absolute;
+      top: 110%;
+      left: 0;
+      width: 100%;
+      background: #fff;
+      border: 1.5px solid #e5e7eb;
+      border-radius: 8px;
+      box-shadow: 0 4px 16px rgba(102, 126, 234, 0.08);
+      z-index: 10;
+      padding: 8px 0;
+      max-height: 220px;
+      overflow-y: auto;
+      .dropdown-item {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 8px 16px;
+        font-size: 14px;
+        cursor: pointer;
+        transition: background 0.2s;
+        &:hover {
+          background: #eef2ff;
+        }
+        input[type="checkbox"] {
+          accent-color: #667eea;
+        }
+      }
+    }
+  }
+
+  .perm-badge {
+    display: inline-block;
+    padding: 2px 10px;
+    border-radius: 6px;
+    font-size: 13px;
+    font-weight: 500;
+    margin-right: 4px;
+    margin-bottom: 2px;
+    color: #fff;
+    background: #a0aec0;
+    text-transform: capitalize;
+  }
+  .perm-read { background: #3b82f6; }
+  .perm-write { background: #10b981; }
+  .perm-delete { background: #ef4444; }
+  .perm-admin { background: #a21caf; }
+  .perm-export { background: #f59e42; }
+  .perm-manage-users { background: #6366f1; }
+
+  @media (max-width: 900px) {
+    padding: 16px;
+    .form-row {
+      flex-direction: column;
+      align-items: stretch;
+      input {
+        min-width: 0;
+        width: 100%;
+      }
+    }
+    .role-table th, .role-table td {
+      font-size: 14px;
+      padding: 10px 6px;
+    }
+  }
+} 
