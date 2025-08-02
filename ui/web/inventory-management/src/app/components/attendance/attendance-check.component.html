@@ -1,4 +1,10 @@
-<div class="attendance-check">
+<div class="attendance-check responsive-container">
+  <div class="loading-overlay" *ngIf="isLoading">
+    <div class="loading-content">
+      <div class="spinner"></div>
+      <p>Processing your request...</p>
+    </div>
+  </div>
   <!-- Header Section -->
   <div class="header-section">
     <div class="title-area">
@@ -11,7 +17,7 @@
         class="btn btn-secondary"
         (click)="refreshAttendance()"
         [disabled]="isLoading">
-        <i class="icon-refresh"></i>
+        <span class="refresh-emoji">🔄</span>
         Refresh
       </button>
     </div>
@@ -19,65 +25,277 @@
 
   <!-- Alert Messages -->
   <div class="alert alert-success" *ngIf="successMessage">
-    <i class="icon-check"></i>
+    <span class="success-emoji">✅</span>
     {{ successMessage }}
   </div>
   
   <div class="alert alert-error" *ngIf="errorMessage">
-    <i class="icon-error"></i>
+    <span class="error-emoji">❌</span>
     {{ errorMessage }}
+    <button class="btn btn-link retry-btn" *ngIf="errorMessage.includes('Location')" (click)="getCurrentLocation()">📍 Retry Location</button>
+    <button class="btn btn-link retry-btn" *ngIf="!errorMessage.includes('Location')" (click)="refreshAttendance()">🔄 Retry</button>
   </div>
 
-  <!-- Current Status Card -->
-  <div class="status-card">
-    <div class="status-header">
-      <h3>Today's Attendance</h3>
-              <div class="status-date">{{ getCurrentDate() }}</div>
-    </div>
-    
-    <div class="status-content" *ngIf="todayAttendance; else noAttendanceToday">
-      <div class="status-info">
-        <div class="status-badge" [class]="getStatusClass(todayAttendance.attendance_status)">
-          {{ todayAttendance.attendance_status | titlecase }}
+  <!-- Modern Attendance Overview -->
+  <div class="attendance-overview-grid">
+    <!-- Today's Statistics Card -->
+    <div class="stats-card">
+      <div class="stats-header">
+        <div class="stats-icon">
+          <span class="stats-emoji">📊</span>
         </div>
-        <div class="work-type">{{ getWorkTypeLabel(todayAttendance.work_type) }}</div>
+        <div class="stats-content">
+          <h3>Today's Statistics</h3>
+          <p class="stats-date">{{ getCurrentDate() }}</p>
+        </div>
       </div>
       
-      <div class="time-info">
-        <div class="time-item" *ngIf="todayAttendance.check_in_time">
-          <label>Check In</label>
-          <div class="time">{{ formatTime(todayAttendance.check_in_time) }}</div>
+      <div class="stats-metrics">
+        <div class="metric">
+          <div class="metric-value">{{ attendanceState?.todaySessions?.length || 0 }}</div>
+          <div class="metric-label">Sessions</div>
         </div>
-        <div class="time-item" *ngIf="todayAttendance.check_out_time">
-          <label>Check Out</label>
-          <div class="time">{{ formatTime(todayAttendance.check_out_time) }}</div>
+        <div class="metric">
+          <div class="metric-value">{{ attendanceState?.totalHoursToday || '0h 0m' }}</div>
+          <div class="metric-label">Total Hours</div>
         </div>
-        <div class="time-item">
-          <label>Duration</label>
-          <div class="time">{{ calculateWorkDuration() }}</div>
+        <div class="metric">
+          <div class="metric-value status-indicator" [class]="attendanceState?.isCheckedIn ? 'checked-in' : 'checked-out'">
+            {{ attendanceState?.isCheckedIn ? 'IN' : 'OUT' }}
+          </div>
+          <div class="metric-label">Status</div>
         </div>
-      </div>
-
-      <div class="location-info" *ngIf="todayAttendance.location_name">
-        <label>Location</label>
-        <div class="location">{{ todayAttendance.location_name }}</div>
-      </div>
-
-      <div class="notes-info" *ngIf="todayAttendance.notes">
-        <label>Notes</label>
-        <div class="notes">{{ todayAttendance.notes }}</div>
       </div>
     </div>
 
-    <ng-template #noAttendanceToday>
-      <div class="no-attendance">
-        <div class="no-attendance-icon">
-          <i class="icon-calendar"></i>
+    <!-- Current Session Card (only if checked in) -->
+    <div class="current-session-card" *ngIf="attendanceState?.currentSession">
+      <div class="session-header">
+        <div class="session-icon">
+          <span class="session-emoji">▶️</span>
         </div>
-        <h4>No attendance marked today</h4>
-        <p>Start by checking in to track your work hours</p>
+        <div class="session-content">
+          <h3>Current Session</h3>
+          <p class="session-status">{{ getWorkTypeLabel(attendanceState!.currentSession!.work_type) }}</p>
+        </div>
       </div>
-    </ng-template>
+      
+      <div class="session-details">
+        <div class="detail-item">
+          <span class="detail-label">Started</span>
+          <span class="detail-value">{{ formatTime(attendanceState!.currentSession!.check_in_time) }}</span>
+        </div>
+        <div class="detail-item">
+          <span class="detail-label">Duration</span>
+          <span class="detail-value duration-live">{{ calculateWorkDurationFor(attendanceState!.currentSession!) }}</span>
+        </div>
+        <div class="detail-item" *ngIf="attendanceState!.currentSession!.location_name">
+          <span class="detail-label">Location</span>
+          <span class="detail-value location-text">{{ attendanceState!.currentSession!.location_name }}</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Quick Actions Card -->
+    <div class="quick-actions-card">
+      <div class="actions-header">
+        <div class="actions-icon">
+          <span class="actions-emoji">⚡</span>
+        </div>
+        <div class="actions-content">
+          <h3>Quick Actions</h3>
+          <p>Manage your attendance</p>
+        </div>
+      </div>
+      
+      <div class="actions-buttons">
+        <button 
+          class="action-btn primary" 
+          *ngIf="!attendanceState?.isCheckedIn"
+          (click)="scrollToCheckIn()">
+          <span class="btn-emoji">🏃‍♂️</span>
+          Check In
+        </button>
+        
+        <button 
+          class="action-btn warning" 
+          *ngIf="attendanceState?.isCheckedIn"
+          (click)="scrollToCheckOut()">
+          <span class="btn-emoji">🚶‍♂️</span>
+          Check Out
+        </button>
+        
+        <button 
+          class="action-btn secondary"
+          (click)="refreshAttendance()">
+          <span class="btn-emoji">🔄</span>
+          Refresh
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modern Sessions List -->
+  <div class="sessions-section" *ngIf="attendanceState?.allSessions && attendanceState!.allSessions!.length > 0">
+    <div class="sessions-header">
+      <div class="header-content">
+        <h3>Recent Attendance History</h3>
+        <p class="sessions-count">{{ attendanceState!.allSessions!.length }} session(s) from {{ getDateRangeDescription() }}</p>
+        <div class="date-range-info" *ngIf="attendanceState!.allSessions!.length > 0">
+          <span class="date-range-emoji">📅</span>
+          <span class="date-range-text">
+            {{ getOldestSessionDate() }} → {{ getNewestSessionDate() }}
+          </span>
+          <span class="data-status" [class]="attendanceState?.hasMoreData ? 'has-more' : 'all-loaded'">
+            {{ attendanceState?.hasMoreData ? '(more available)' : '(all loaded)' }}
+          </span>
+        </div>
+        
+        <!-- Expand/Collapse All Controls -->
+        <div class="expand-collapse-controls">
+          <button class="control-btn" (click)="expandAllSections()">
+            <span>Expand All</span>
+          </button>
+          <button class="control-btn" (click)="collapseAllSections()">
+            <span>Collapse All</span>
+          </button>
+        </div>
+      </div>
+      <div class="header-summary">
+        <div class="total-hours-badge">
+          <i class="icon-clock"></i>
+          <span>{{ attendanceState!.totalHoursToday }}</span>
+          <small>Today's Hours</small>
+        </div>
+      </div>
+    </div>
+
+    <!-- Group sessions by date -->
+    <div class="sessions-by-date" *ngFor="let dateGroup of getSessionsByDate()">
+      <div class="date-header clickable" (click)="toggleDateSection(dateGroup.date)">
+        <div class="date-header-main">
+          <div class="expand-indicator">
+            <span class="chevron-icon" [class.expanded]="!isDateCollapsed(dateGroup.date)">
+              {{ isDateCollapsed(dateGroup.date) ? '▶️' : '🔽' }}
+            </span>
+          </div>
+          <h4 class="date-name">{{ formatDateHeader(dateGroup.date) }}</h4>
+          <span class="date-sessions">{{ dateGroup.sessions.length }} session(s)</span>
+        </div>
+        <div class="date-header-meta">
+          <span class="total-time">{{ calculateDateTotalHours(dateGroup.sessions) }}</span>
+          <span class="expand-hint">{{ isDateCollapsed(dateGroup.date) ? 'Click to expand' : 'Click to collapse' }}</span>
+        </div>
+      </div>
+      
+      <div class="sessions-grid" 
+           [class.collapsed]="isDateCollapsed(dateGroup.date)"
+           [@slideInOut]="isDateCollapsed(dateGroup.date) ? 'out' : 'in'">
+        <div class="session-card" *ngFor="let session of dateGroup.sessions; let i = index" 
+             [class]="session.check_out_time ? 'completed' : 'active'">
+        <div class="session-number">
+          <span>{{ i + 1 }}</span>
+        </div>
+        
+        <div class="session-timeline">
+          <div class="timeline-item check-in">
+            <div class="timeline-icon">
+              <span class="timeline-emoji">🏃‍♂️</span>
+            </div>
+            <div class="timeline-content">
+              <div class="time-label">Check In</div>
+              <div class="time-value">{{ formatTime(session.check_in_time) }}</div>
+            </div>
+          </div>
+          
+          <div class="timeline-connector" [class]="session.check_out_time ? 'completed' : 'active'"></div>
+          
+          <div class="timeline-item check-out" [class]="session.check_out_time ? 'completed' : 'pending'">
+            <div class="timeline-icon">
+              <span class="timeline-emoji">🚶‍♂️</span>
+            </div>
+            <div class="timeline-content">
+              <div class="time-label">Check Out</div>
+              <div class="time-value">{{ session.check_out_time ? formatTime(session.check_out_time) : 'In Progress' }}</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="session-details">
+          <div class="details-grid">
+            <div class="detail-item duration">
+              <span class="detail-emoji">⏰</span>
+              <div class="detail-content">
+                <span class="label">Duration</span>
+                <span class="value" [class]="!session.check_out_time ? 'live-counter' : ''">
+                  <ng-container *ngIf="session.check_in_time && session.check_out_time; else activeDuration">
+                    {{ calculateWorkDurationFor(session) }}
+                  </ng-container>
+                  <ng-template #activeDuration>
+                    {{ session.check_out_time ? '--' : calculateWorkDurationFor(session) }}
+                  </ng-template>
+                </span>
+              </div>
+            </div>
+            
+            <div class="detail-item location" *ngIf="session.location_name">
+              <span class="detail-emoji">📍</span>
+              <div class="detail-content">
+                <span class="label">Location</span>
+                <span class="value location-name">{{ session.location_name }}</span>
+              </div>
+            </div>
+            
+            <div class="detail-item work-type" *ngIf="session.work_type">
+              <span class="detail-emoji">💼</span>
+              <div class="detail-content">
+                <span class="label">Work Type</span>
+                <span class="value">{{ getWorkTypeLabel(session.work_type) }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="session-actions" *ngIf="session.check_in_latitude && session.check_in_longitude">
+          <button class="map-btn" (click)="openMap(session.check_in_latitude, session.check_in_longitude)">
+            <span class="map-emoji">🗺️</span>
+            <span>View on Map</span>
+          </button>
+        </div>
+
+        <div class="session-status-indicator" [class]="session.check_out_time ? 'completed' : 'active'">
+          <span *ngIf="session.check_out_time; else activeStatus">Completed</span>
+          <ng-template #activeStatus>
+            <span class="pulse">Active</span>
+          </ng-template>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Load More Section -->
+    <div class="load-more-section" *ngIf="attendanceState?.hasMoreData || attendanceState?.isLoadingMore">
+      <div class="load-more-container">
+        <div class="loading-indicator" *ngIf="attendanceState?.isLoadingMore">
+          <div class="spinner"></div>
+          <span>Loading more attendance records...</span>
+        </div>
+        
+        <button 
+          class="load-more-btn"
+          *ngIf="attendanceState?.hasMoreData && !attendanceState?.isLoadingMore"
+          (click)="loadMoreData()">
+          <span class="load-more-emoji">📊</span>
+          <span>Load More History</span>
+          <div class="btn-ripple"></div>
+        </button>
+        
+        <div class="end-of-data" *ngIf="!attendanceState?.hasMoreData && !attendanceState?.isLoadingMore">
+          <span class="end-emoji">🎯</span>
+          <span>You've reached the end of your attendance history</span>
+        </div>
+      </div>
+    </div>
+    </div>
   </div>
 
   <!-- Location Status -->
@@ -119,7 +337,7 @@
   <!-- Check In/Out Actions -->
   <div class="action-cards">
     <!-- Check In Card -->
-    <div class="action-card" *ngIf="!isCheckedIn">
+    <div id="check-in-section" class="action-card" *ngIf="!attendanceState?.isCheckedIn">
       <div class="card-header">
         <h3>Check In</h3>
         <i class="icon-login card-icon"></i>
@@ -191,7 +409,7 @@
     </div>
 
     <!-- Check Out Card -->
-    <div class="action-card" *ngIf="isCheckedIn">
+    <div id="check-out-section" class="action-card" *ngIf="attendanceState?.isCheckedIn">
       <div class="card-header">
         <h3>Check Out</h3>
         <i class="icon-logout card-icon"></i>
@@ -231,24 +449,24 @@
       </form>
     </div>
 
-    <!-- Already Checked Out -->
-    <div class="action-card completed" *ngIf="isCheckedOut">
+    <!-- Already Checked Out or No Active Session -->
+    <div class="action-card completed" *ngIf="!attendanceState?.isCheckedIn && attendanceState?.todaySessions && attendanceState!.todaySessions!.length > 0">
       <div class="card-header">
         <h3>Work Complete</h3>
         <i class="icon-check-circle card-icon"></i>
       </div>
       
       <div class="completed-info">
-        <p>You have already checked out for today.</p>
+        <p>Your work sessions for today are complete.</p>
         <div class="work-summary">
           <div class="summary-item">
-            <strong>Check In:</strong> {{ formatTime(todayAttendance!.check_in_time) }}
+            <strong>Total Sessions:</strong> {{ attendanceState!.todaySessions!.length }}
           </div>
           <div class="summary-item">
-            <strong>Check Out:</strong> {{ formatTime(todayAttendance!.check_out_time!) }}
+            <strong>Total Hours:</strong> {{ attendanceState!.totalHoursToday }}
           </div>
           <div class="summary-item">
-            <strong>Total Duration:</strong> {{ calculateWorkDuration() }}
+            <strong>Last Check Out:</strong> {{ getLastCheckOutTime() }}
           </div>
         </div>
       </div>

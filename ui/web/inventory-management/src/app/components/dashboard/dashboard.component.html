@@ -1,64 +1,192 @@
 <div class="dashboard">
-  <!-- Header Section -->
-  <div class="dashboard-header">
-    <div class="welcome-section">
-      <h1>{{ getGreeting() }}, {{ currentUserName }}!</h1>
-      <p class="subtitle">Welcome to your inventory management dashboard</p>
+  <!-- Modern Header Section -->
+  <div class="modern-header">
+    <div class="header-content">
+      <div class="welcome-section">
+        <h1 class="greeting">{{ getGreeting() }}, {{ currentUserName }}!</h1>
+        <p class="subtitle">Welcome to your inventory management dashboard</p>
+        <div class="user-role-badge" [class]="getUserRoleClass()">
+          <span class="role-icon">🛡️</span>
+          {{ getUserRoleName() | titlecase }} Access
+        </div>
+      </div>
+      
+      <!-- Modern Digital Clock Widget -->
+      <div class="digital-clock-widget">
+        <div class="clock-container">
+          <div class="time-display">
+            <span class="hours">{{ currentTime.split(':')[0] }}</span>
+            <span class="separator">:</span>
+            <span class="minutes">{{ currentTime.split(':')[1] }}</span>
+            <span class="separator">:</span>
+            <span class="seconds">{{ currentTime.split(' ')[0].split(':')[2] }}</span>
+            <span class="ampm">{{ currentTime.split(' ')[1] }}</span>
+          </div>
+          <div class="date-display">
+            <span class="date">{{ currentDate }}</span>
+          </div>
+          <div class="timezone-display">
+            <span class="globe-icon">🌍</span>
+            <span>{{ timeZone }}</span>
+          </div>
+        </div>
+      </div>
     </div>
     
     <div class="user-actions">
-      <button class="btn btn-secondary" (click)="goToChangePassword()">
-        <i class="icon-key"></i>
-        Change Password
+      <button class="action-btn secondary" (click)="goToChangePassword()">
+        <span class="action-icon">🔑</span>
+        <span>Change Password</span>
       </button>
-      <button class="btn btn-danger" (click)="logout()">
-        <i class="icon-logout"></i>
-        Logout
+      <button class="action-btn danger" (click)="logout()">
+        <span class="action-icon">🚪</span>
+        <span>Logout</span>
       </button>
     </div>
   </div>
 
-  <!-- Today's Attendance Widget -->
-  <div class="attendance-widget" *ngIf="currentUser">
+  <!-- Enhanced Attendance Dashboard Widget -->
+  <div class="attendance-dashboard-widget" *ngIf="currentUser && attendanceState">
     <div class="widget-header">
-      <h3>Today's Attendance</h3>
-      <span class="attendance-status" [class]="getAttendanceStatusClass()">
-        {{ getAttendanceStatus() }}
-      </span>
-    </div>
-    
-    <div class="attendance-details" *ngIf="todayAttendance; else noAttendanceToday">
-      <div class="time-info">
-        <div class="time-item" *ngIf="todayAttendance.check_in_time">
-          <label>Check In</label>
-          <span>{{ formatTime(todayAttendance.check_in_time) }}</span>
+      <div class="header-main">
+        <div class="widget-title">
+          <h2>Today's Attendance</h2>
+          <span class="live-indicator">
+            <span class="pulse-dot"></span>
+            Live Updates
+          </span>
         </div>
-        <div class="time-item" *ngIf="todayAttendance.check_out_time">
-          <label>Check Out</label>
-          <span>{{ formatTime(todayAttendance.check_out_time) }}</span>
-        </div>
-        <div class="time-item">
-          <label>Duration</label>
-          <span>{{ getWorkDuration() }}</span>
+        <div class="widget-meta">
+          <span class="last-sync">Last sync: {{ attendanceState.lastUpdate | date:'HH:mm:ss' }}</span>
+          <span class="user-role" [class]="getUserRoleClass()">
+            {{ getUserRoleName() | titlecase }} View
+          </span>
         </div>
       </div>
-      <div class="attendance-actions">
-        <button class="btn btn-primary btn-sm" (click)="navigateToAction('/attendance/check')">
-          <i class="icon-calendar"></i>
-          {{ todayAttendance.check_out_time ? 'View Details' : 'Check Out' }}
+      <div class="header-actions">
+        <button class="refresh-btn" (click)="refreshAttendance()" [disabled]="attendanceState.isLoading">
+          <span class="refresh-icon" [class.spinning]="attendanceState.isLoading">🔄</span>
         </button>
       </div>
     </div>
 
-    <ng-template #noAttendanceToday>
-      <div class="no-attendance">
-        <p>You haven't checked in today</p>
-        <button class="btn btn-primary btn-sm" (click)="navigateToAction('/attendance/check')">
-          <i class="icon-login"></i>
-          Check In Now
+    <!-- Attendance Status Cards Grid -->
+    <div class="attendance-grid">
+      <!-- Current Status Card -->
+      <div class="status-card" [class]="attendanceState.isCheckedIn ? 'checked-in' : 'checked-out'">
+        <div class="card-icon">
+          <span class="status-emoji">{{ attendanceState.isCheckedIn ? '✅' : '❌' }}</span>
+        </div>
+        <div class="card-content">
+          <h3>Current Status</h3>
+          <p class="status-text">{{ attendanceState.isCheckedIn ? 'Checked In' : 'Not Checked In' }}</p>
+          <span class="status-time" *ngIf="attendanceState.currentSession">
+            Since {{ formatTime(attendanceState.currentSession.check_in_time) }}
+          </span>
+        </div>
+        <div class="card-indicator" [class]="attendanceState.isCheckedIn ? 'active' : 'inactive'"></div>
+      </div>
+
+      <!-- Today's Hours Card -->
+      <div class="hours-card">
+        <div class="card-icon">
+          <span class="time-emoji">⏰</span>
+        </div>
+        <div class="card-content">
+          <h3>Today's Hours</h3>
+          <p class="hours-value">{{ attendanceState.totalHoursToday || '0h 0m' }}</p>
+          <span class="sessions-count">{{ (attendanceState.todaySessions?.length || 0) }} session(s)</span>
+        </div>
+        <div class="progress-ring" *ngIf="attendanceState.currentSession">
+          <div class="live-timer">{{ getCurrentSessionDuration() }}</div>
+        </div>
+      </div>
+
+      <!-- Location Card -->
+      <div class="location-card" *ngIf="attendanceState.currentSession">
+        <div class="card-icon">
+          <span class="location-emoji">📍</span>
+        </div>
+        <div class="card-content">
+          <h3>Current Location</h3>
+          <p class="location-text">{{ attendanceState.currentSession.location_name || 'Unknown Location' }}</p>
+          <span class="work-type">{{ getWorkTypeLabel(attendanceState.currentSession.work_type) }}</span>
+        </div>
+      </div>
+
+      <!-- Admin Stats Card (only for admin/manager) -->
+      <div class="admin-stats-card" *ngIf="isManagerOrAdmin">
+        <div class="card-icon">
+          <span class="team-emoji">👥</span>
+        </div>
+        <div class="card-content">
+          <h3>Team Overview</h3>
+          <div class="team-stats">
+            <div class="stat-item">
+              <span class="stat-value">{{ stats.checkedInUsers }}</span>
+              <span class="stat-label">Checked In</span>
+            </div>
+            <div class="stat-item">
+              <span class="stat-value">{{ stats.lateUsers }}</span>
+              <span class="stat-label">Late Today</span>
+            </div>
+            <div class="stat-item">
+              <span class="stat-value">{{ stats.remoteUsers }}</span>
+              <span class="stat-label">Remote</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Quick Action Buttons -->
+    <div class="quick-actions">
+      <button 
+        class="action-button primary-action" 
+        *ngIf="!attendanceState.isCheckedIn"
+        (click)="navigateToAction('/attendance/check')">
+        <span class="button-emoji">🏃‍♂️</span>
+        <span>Check In Now</span>
+        <div class="button-glow"></div>
+      </button>
+      
+      <button 
+        class="action-button warning-action" 
+        *ngIf="attendanceState.isCheckedIn"
+        (click)="navigateToAction('/attendance/check')">
+        <span class="button-emoji">🚶‍♂️</span>
+        <span>Check Out</span>
+        <div class="button-glow"></div>
+      </button>
+      
+      <button 
+        class="action-button secondary-action" 
+        (click)="navigateToAction('/attendance/check')">
+        <span class="button-emoji">📅</span>
+        <span>View Full Details</span>
+      </button>
+
+      <!-- Admin Quick Actions -->
+      <button 
+        class="action-button admin-action" 
+        *ngIf="isManagerOrAdmin"
+        (click)="navigateToAction('/attendance/reports')">
+        <span class="button-emoji">📊</span>
+        <span>Team Reports</span>
+      </button>
+    </div>
+
+    <!-- Error State -->
+    <div class="error-banner" *ngIf="attendanceState.error">
+      <div class="error-content">
+        <span class="error-emoji">⚠️</span>
+        <span>{{ attendanceState.error }}</span>
+        <button class="retry-btn" (click)="refreshAttendance()">
+          <span class="retry-emoji">🔄</span>
+          Retry
         </button>
       </div>
-    </ng-template>
+    </div>
   </div>
 
   <!-- Statistics Cards (for managers and admins) -->

@@ -1,9 +1,11 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { AuthService, User } from '../../services/auth.service';
 import { OrganizationService, OrganizationStats, Attendance } from '../../services/organization.service';
+import { AttendanceStateService, AttendanceState } from '../../services/attendance-state.service';
 import { Router } from '@angular/router';
+import { Subscription } from 'rxjs';
 
 interface DashboardStats {
   totalUsers: number;
@@ -31,9 +33,16 @@ interface QuickAction {
   templateUrl: './dashboard.component.html',
   styleUrls: ['./dashboard.component.scss']
 })
-export class DashboardComponent implements OnInit {
+export class DashboardComponent implements OnInit, OnDestroy {
   currentUser: User | null = null;
   isLoading = false;
+  currentTime: string = '';
+  currentDate: string = '';
+  timeZone: string = '';
+  attendanceState: AttendanceState | null = null;
+  private subscription = new Subscription();
+  private clockInterval: any;
+  
   stats: DashboardStats = {
     totalUsers: 0,
     totalUnits: 0,
@@ -44,7 +53,6 @@ export class DashboardComponent implements OnInit {
     remoteUsers: 0
   };
   
-  todayAttendance: Attendance | null = null;
   recentAttendance: Attendance[] = [];
   
   quickActions: QuickAction[] = [
@@ -117,23 +125,77 @@ export class DashboardComponent implements OnInit {
   constructor(
     private authService: AuthService, 
     private organizationService: OrganizationService,
+    private attendanceStateService: AttendanceStateService,
     private router: Router
   ) {}
 
   ngOnInit(): void {
-    this.authService.currentUser$.subscribe(user => {
-      this.currentUser = user;
-      if (user) {
-        this.loadDashboardData();
-      }
+    // Initialize enhanced clock
+    this.initializeEnhancedClock();
+
+    // Subscribe to user changes
+    this.subscription.add(
+      this.authService.currentUser$.subscribe(user => {
+        this.currentUser = user;
+        if (user) {
+          this.loadDashboardData();
+        }
+      })
+    );
+
+    // Subscribe to attendance state changes
+    this.subscription.add(
+      this.attendanceStateService.attendanceState$.subscribe(state => {
+        this.attendanceState = state;
+      })
+    );
+  }
+
+  ngOnDestroy(): void {
+    this.subscription.unsubscribe();
+    if (this.clockInterval) {
+      clearInterval(this.clockInterval);
+    }
+  }
+
+  initializeEnhancedClock(): void {
+    // Update clock immediately
+    this.updateClock();
+    
+    // Then update every second
+    this.clockInterval = setInterval(() => {
+      this.updateClock();
+    }, 1000);
+  }
+
+  updateClock(): void {
+    const now = new Date();
+    
+    // Format time with 12-hour format
+    this.currentTime = now.toLocaleTimeString('en-US', { 
+      hour: '2-digit', 
+      minute: '2-digit', 
+      second: '2-digit', 
+      hour12: true 
     });
+    
+    // Format date
+    this.currentDate = now.toLocaleDateString('en-US', { 
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    });
+    
+    // Get timezone
+    this.timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
   }
 
   loadDashboardData(): void {
     this.isLoading = true;
     Promise.all([
       this.loadStats(),
-      this.loadTodayAttendance(),
+      // loadTodayAttendance is now handled by AttendanceStateService
       this.loadRecentAttendance()
     ]).finally(() => {
       this.isLoading = false;
@@ -166,22 +228,8 @@ export class DashboardComponent implements OnInit {
     });
   }
 
-  loadTodayAttendance(): Promise<void> {
-    return new Promise((resolve) => {
-      if (this.currentUser) {
-        this.organizationService.getCurrentUserAttendance().subscribe({
-          next: (attendance) => {
-            if (attendance && Array.isArray(attendance) && attendance.length > 0) {
-              this.todayAttendance = attendance[0];
-            }
-            resolve();
-          },
-          error: () => resolve()
-        });
-      } else {
-        resolve();
-      }
-    });
+  refreshAttendance(): void {
+    this.attendanceStateService.refreshAttendanceState().subscribe();
   }
 
   loadRecentAttendance(): Promise<void> {
@@ -223,14 +271,14 @@ export class DashboardComponent implements OnInit {
   }
 
   getAttendanceStatus(): string {
-    if (!this.todayAttendance) return 'Not checked in';
-    if (this.todayAttendance.check_out_time) return 'Checked out';
+    if (!this.attendanceState?.currentSession) return 'Not checked in';
+    if (this.attendanceState.currentSession.check_out_time) return 'Checked out';
     return 'Checked in';
   }
 
   getAttendanceStatusClass(): string {
-    if (!this.todayAttendance) return 'status-absent';
-    if (this.todayAttendance.check_out_time) return 'status-complete';
+    if (!this.attendanceState?.currentSession) return 'status-absent';
+    if (this.attendanceState.currentSession.check_out_time) return 'status-complete';
     return 'status-present';
   }
 
@@ -242,13 +290,13 @@ export class DashboardComponent implements OnInit {
   }
 
   getWorkDuration(): string {
-    if (!this.todayAttendance || !this.todayAttendance.check_in_time) {
+    if (!this.attendanceState?.currentSession?.check_in_time) {
       return '--';
     }
 
-    const checkIn = new Date(this.todayAttendance.check_in_time);
-    const checkOut = this.todayAttendance.check_out_time 
-      ? new Date(this.todayAttendance.check_out_time)
+    const checkIn = new Date(this.attendanceState.currentSession.check_in_time);
+    const checkOut = this.attendanceState.currentSession.check_out_time 
+      ? new Date(this.attendanceState.currentSession.check_out_time)
       : new Date();
 
     const diffMs = checkOut.getTime() - checkIn.getTime();
@@ -283,5 +331,35 @@ export class DashboardComponent implements OnInit {
   get currentUserName(): string {
     if (!this.currentUser) return '';
     return `${this.currentUser.first_name} ${this.currentUser.last_name}`;
+  }
+
+  getCurrentSessionDuration(): string {
+    if (!this.attendanceState?.currentSession?.check_in_time) return '--';
+    
+    const checkIn = new Date(this.attendanceState.currentSession.check_in_time);
+    const now = new Date();
+    const diffMs = now.getTime() - checkIn.getTime();
+    const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+    const diffMinutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
+    
+    return `${diffHours}h ${diffMinutes}m`;
+  }
+
+  getWorkTypeLabel(workType: string): string {
+    const workTypes: { [key: string]: string } = {
+      'office': 'Office Work',
+      'remote': 'Remote Work',
+      'client-site': 'Client Site',
+      'travel': 'Travel'
+    };
+    return workTypes[workType] || workType;
+  }
+
+  getUserRoleName(): string {
+    return this.currentUser?.role?.name || 'user';
+  }
+
+  getUserRoleClass(): string {
+    return this.currentUser?.role?.name || 'user';
   }
 } 

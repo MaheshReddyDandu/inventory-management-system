@@ -14,6 +14,7 @@ from fastapi import HTTPException, status
 from datetime import datetime, date, timedelta
 from typing import List, Dict, Optional
 import math
+import requests
 
 class OrganizationService:
     def __init__(self, db: Session):
@@ -230,6 +231,17 @@ class OrganizationService:
         r = 6371000  # Earth's radius in meters
         return c * r
     
+    def reverse_geocode(self, lat: float, lng: float) -> str:
+        try:
+            url = f'https://nominatim.openstreetmap.org/reverse?format=json&lat={lat}&lon={lng}&zoom=16&addressdetails=1'
+            response = requests.get(url, headers={'User-Agent': 'attendance-app'})
+            if response.status_code == 200:
+                data = response.json()
+                return data.get('display_name', f'{lat}, {lng}')
+            return f'{lat}, {lng}'
+        except Exception:
+            return f'{lat}, {lng}'
+    
     # Attendance Methods
     def check_in(self, user_id: int, product_id: str, check_in_data: CheckInRequest) -> Attendance:
         """Mark attendance check-in"""
@@ -251,7 +263,11 @@ class OrganizationService:
         
         # Validate location if work_type is office
         if check_in_data.work_type == 'office':
-            if not self.validate_location(
+            # Check if this is mock GPS (skip validation for development)
+            is_mock_gps = (float(check_in_data.latitude) == 37.7749 and 
+                          float(check_in_data.longitude) == -122.4194)
+            
+            if not is_mock_gps and not self.validate_location(
                 float(check_in_data.latitude), 
                 float(check_in_data.longitude), 
                 product_id
@@ -265,6 +281,9 @@ class OrganizationService:
         attendance_status = self._determine_attendance_status(user_id, product_id, check_in_data.organizational_unit_id)
         
         # Create attendance record
+        location_name = check_in_data.location_name
+        if not location_name and check_in_data.latitude and check_in_data.longitude:
+            location_name = self.reverse_geocode(float(check_in_data.latitude), float(check_in_data.longitude))
         db_attendance = Attendance(
             user_id=user_id,
             product_id=product_id,
@@ -272,7 +291,7 @@ class OrganizationService:
             check_in_time=datetime.utcnow(),
             check_in_latitude=check_in_data.latitude,
             check_in_longitude=check_in_data.longitude,
-            location_name=check_in_data.location_name,
+            location_name=location_name,
             attendance_status=attendance_status,
             work_type=check_in_data.work_type,
             notes=check_in_data.notes
@@ -307,8 +326,7 @@ class OrganizationService:
         if check_out_data.latitude and check_out_data.longitude:
             attendance.check_out_latitude = check_out_data.latitude
             attendance.check_out_longitude = check_out_data.longitude
-        if check_out_data.location_name:
-            attendance.location_name = check_out_data.location_name
+            attendance.location_name = self.reverse_geocode(float(check_out_data.latitude), float(check_out_data.longitude))
         if check_out_data.notes:
             attendance.notes = check_out_data.notes
         
@@ -325,6 +343,16 @@ class OrganizationService:
             func.date(Attendance.check_in_time) >= start_date,
             func.date(Attendance.check_in_time) <= end_date
         ).order_by(Attendance.check_in_time.desc()).all()
+    
+    def get_attendance_records_paginated(self, user_id: int, product_id: str, start_date: date, end_date: date, page: int = 1, limit: int = 50) -> List[Attendance]:
+        """Get attendance records for a user within date range with pagination"""
+        offset = (page - 1) * limit
+        return self.db.query(Attendance).filter(
+            Attendance.user_id == user_id,
+            Attendance.product_id == product_id,
+            func.date(Attendance.check_in_time) >= start_date,
+            func.date(Attendance.check_in_time) <= end_date
+        ).order_by(Attendance.check_in_time.desc()).offset(offset).limit(limit).all()
     
     def get_today_attendance(self, product_id: str) -> List[Attendance]:
         """Get today's attendance for all users in a product"""

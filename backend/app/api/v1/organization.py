@@ -215,12 +215,21 @@ async def check_out(
 async def get_my_attendance(
     start_date: date = Query(..., description="Start date (YYYY-MM-DD)"),
     end_date: date = Query(..., description="End date (YYYY-MM-DD)"),
+    page: int = Query(1, ge=1, description="Page number (starting from 1)"),
+    limit: int = Query(50, ge=1, le=100, description="Number of records per page (max 100)"),
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    """Get current user's attendance records"""
+    """Get current user's attendance records with pagination"""
     org_service = OrganizationService(db)
-    records = org_service.get_attendance_records(current_user.id, current_user.product_id, start_date, end_date)
+    records = org_service.get_attendance_records_paginated(
+        current_user.id, 
+        current_user.product_id, 
+        start_date, 
+        end_date,
+        page,
+        limit
+    )
     return records
 
 @router.get("/attendance/today", response_model=List[AttendanceResponse])
