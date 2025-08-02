@@ -39,12 +39,13 @@ export interface UserAssignment {
   user_id: number;
   organizational_unit_id: number;
   product_id: string;
-  position?: string;
+  role_in_unit: string;
+  is_primary: boolean;
   start_date: string;
   end_date?: string;
-  is_primary: boolean;
   is_active: boolean;
   created_at: string;
+  notes?: string;
 }
 
 export interface OfficeLocation {
@@ -220,13 +221,27 @@ export class OrganizationService {
   }
 
   getUserAssignments(userId: number): Observable<UserAssignment[]> {
-    return this.http.get<UserAssignment[]>(`${this.API_URL}/assignments/${userId}`, { headers: this.getAuthHeaders() })
-      .pipe(catchError(this.handleError));
+    return this.http.get<UserAssignment[]>(`${this.API_URL}/assignments/user/${userId}`, {
+      headers: this.getAuthHeaders()
+    }).pipe(
+      catchError(this.handleError)
+    );
+  }
+
+  getAllAssignments(): Observable<UserAssignment[]> {
+    return this.http.get<UserAssignment[]>(`${this.API_URL}/assignments`, {
+      headers: this.getAuthHeaders()
+    }).pipe(
+      catchError(this.handleError)
+    );
   }
 
   getUnitUsers(unitId: number): Observable<UserAssignment[]> {
-    return this.http.get<UserAssignment[]>(`${this.API_URL}/units/${unitId}/users`, { headers: this.getAuthHeaders() })
-      .pipe(catchError(this.handleError));
+    return this.http.get<UserAssignment[]>(`${this.API_URL}/assignments/unit/${unitId}`, {
+      headers: this.getAuthHeaders()
+    }).pipe(
+      catchError(this.handleError)
+    );
   }
 
   updateUserAssignment(id: number, assignment: Partial<UserAssignment>): Observable<UserAssignment> {

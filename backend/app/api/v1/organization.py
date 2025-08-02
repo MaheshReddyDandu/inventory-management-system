@@ -105,6 +105,16 @@ async def assign_user_to_unit(
     assignment = org_service.assign_user_to_unit(assignment_data)
     return assignment
 
+@router.get("/assignments", response_model=List[UserAssignmentResponse])
+async def get_all_assignments(
+    current_user: User = Depends(require_roles_and_product(["admin", "manager"])),
+    db: Session = Depends(get_db)
+):
+    """Get all assignments for current user's product"""
+    org_service = OrganizationService(db)
+    assignments = org_service.get_all_assignments(current_user.product_id)
+    return assignments
+
 @router.get("/assignments/user/{user_id}", response_model=List[UserAssignmentResponse])
 async def get_user_assignments(
     user_id: int,

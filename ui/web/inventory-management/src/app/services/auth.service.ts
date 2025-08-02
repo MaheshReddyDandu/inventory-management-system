@@ -157,8 +157,19 @@ export class AuthService {
   }
 
   changePassword(data: ChangePasswordRequest): Observable<any> {
-    return this.http.post(`${this.API_URL}/auth/change-password`, data, { headers: this.getAuthHeaders() })
-      .pipe(catchError(this.handleError));
+    return this.http.post<any>(`${this.API_URL}/auth/change-password`, data, {
+      headers: this.getAuthHeaders()
+    }).pipe(
+      catchError(this.handleError)
+    );
+  }
+
+  getUsers(): Observable<User[]> {
+    return this.http.get<User[]>(`${this.API_URL}/auth/users`, {
+      headers: this.getAuthHeaders()
+    }).pipe(
+      catchError(this.handleError)
+    );
   }
 
   // Token Management

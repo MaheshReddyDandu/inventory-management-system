@@ -181,10 +181,15 @@ class OrganizationService:
         """Get all assignments for a user"""
         return self.db.query(UserAssignment).filter(
             UserAssignment.user_id == user_id,
-            UserAssignment.product_id == product_id,
-            UserAssignment.is_active == True
+            UserAssignment.product_id == product_id
         ).all()
-    
+
+    def get_all_assignments(self, product_id: str) -> List[UserAssignment]:
+        """Get all assignments for a product"""
+        return self.db.query(UserAssignment).filter(
+            UserAssignment.product_id == product_id
+        ).order_by(UserAssignment.created_at.desc()).all()
+
     def get_unit_users(self, unit_id: int, product_id: str) -> List[UserAssignment]:
         """Get all users assigned to a unit"""
         return self.db.query(UserAssignment).filter(
