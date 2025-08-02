@@ -1,0 +1,186 @@
+<div class="hierarchy-container">
+  <!-- Header -->
+  <div class="hierarchy-header">
+    <h3>Organization Hierarchy</h3>
+    <div class="hierarchy-actions">
+      <button class="btn btn-icon btn-refresh" (click)="refresh()" title="Refresh Hierarchy">
+        <i class="icon-refresh"></i>
+      </button>
+    </div>
+  </div>
+
+  <!-- Error Message -->
+  <div class="alert alert-error" *ngIf="errorMessage">
+    <i class="icon-error"></i>
+    {{ errorMessage }}
+  </div>
+
+  <!-- Loading State -->
+  <div class="loading-state" *ngIf="isLoading">
+    <div class="spinner"></div>
+    <p>Loading hierarchy...</p>
+  </div>
+
+  <!-- Hierarchy Tree -->
+  <div class="hierarchy-tree" *ngIf="!isLoading && hierarchyTree.length > 0">
+    <div class="tree-container">
+      <ng-container *ngFor="let node of hierarchyTree">
+        <div class="tree-node" [class.selected]="selectedNodeId === node.id">
+          <div class="node-content" 
+               [style.margin-left.px]="node.level * 20"
+               (click)="selectNode(node)">
+            
+            <!-- Expand/Collapse Button -->
+            <button 
+              class="expand-btn"
+              *ngIf="node.children && node.children.length > 0"
+              (click)="toggleNode(node.id); $event.stopPropagation()">
+              <i class="icon-chevron" 
+                 [class.expanded]="isExpanded(node.id)"></i>
+            </button>
+            <div class="expand-spacer" *ngIf="!node.children || node.children.length === 0"></div>
+
+            <!-- Node Icon -->
+            <div class="node-icon" [class]="getNodeTypeClass(node.unit_type)">
+              <i [class]="getNodeIcon(node.unit_type)"></i>
+            </div>
+
+            <!-- Node Info -->
+            <div class="node-info">
+              <div class="node-name">{{ node.name }}</div>
+              <div class="node-meta">
+                <span class="node-code">{{ node.code }}</span>
+                <span class="node-users">{{ node.users_count }} users</span>
+              </div>
+            </div>
+
+            <!-- Node Actions -->
+            <div class="node-actions" *ngIf="isManagerOrAdmin">
+              <button 
+                class="btn btn-icon btn-edit"
+                (click)="onEditUnit(node, $event)"
+                title="Edit Unit">
+                <i class="icon-edit"></i>
+              </button>
+              <button 
+                class="btn btn-icon btn-delete"
+                (click)="onDeleteUnit(node, $event)"
+                title="Delete Unit"
+                *ngIf="isAdmin">
+                <i class="icon-delete"></i>
+              </button>
+            </div>
+          </div>
+
+          <!-- Child Nodes -->
+          <div class="child-nodes" *ngIf="isExpanded(node.id) && node.children && node.children.length > 0">
+            <ng-container *ngFor="let child of node.children">
+              <div class="tree-node child-node" [class.selected]="selectedNodeId === child.id">
+                <div class="node-content" 
+                     [style.margin-left.px]="child.level * 20"
+                     (click)="selectNode(child)">
+                  
+                  <!-- Expand/Collapse Button -->
+                  <button 
+                    class="expand-btn"
+                    *ngIf="child.children && child.children.length > 0"
+                    (click)="toggleNode(child.id); $event.stopPropagation()">
+                    <i class="icon-chevron" 
+                       [class.expanded]="isExpanded(child.id)"></i>
+                  </button>
+                  <div class="expand-spacer" *ngIf="!child.children || child.children.length === 0"></div>
+
+                  <!-- Node Icon -->
+                  <div class="node-icon" [class]="getNodeTypeClass(child.unit_type)">
+                    <i [class]="getNodeIcon(child.unit_type)"></i>
+                  </div>
+
+                  <!-- Node Info -->
+                  <div class="node-info">
+                    <div class="node-name">{{ child.name }}</div>
+                    <div class="node-meta">
+                      <span class="node-code">{{ child.code }}</span>
+                      <span class="node-users">{{ child.users_count }} users</span>
+                    </div>
+                  </div>
+
+                  <!-- Node Actions -->
+                  <div class="node-actions" *ngIf="isManagerOrAdmin">
+                    <button 
+                      class="btn btn-icon btn-edit"
+                      (click)="onEditUnit(child, $event)"
+                      title="Edit Unit">
+                      <i class="icon-edit"></i>
+                    </button>
+                    <button 
+                      class="btn btn-icon btn-delete"
+                      (click)="onDeleteUnit(child, $event)"
+                      title="Delete Unit"
+                      *ngIf="isAdmin">
+                      <i class="icon-delete"></i>
+                    </button>
+                  </div>
+                </div>
+
+                <!-- Nested Child Nodes (recursively rendered) -->
+                <div class="child-nodes" *ngIf="isExpanded(child.id) && child.children && child.children.length > 0">
+                  <!-- This could be made recursive for deeper nesting -->
+                  <ng-container *ngFor="let grandchild of child.children">
+                    <div class="tree-node child-node" [class.selected]="selectedNodeId === grandchild.id">
+                      <div class="node-content" 
+                           [style.margin-left.px]="grandchild.level * 20"
+                           (click)="selectNode(grandchild)">
+                        
+                        <div class="expand-spacer"></div>
+
+                        <!-- Node Icon -->
+                        <div class="node-icon" [class]="getNodeTypeClass(grandchild.unit_type)">
+                          <i [class]="getNodeIcon(grandchild.unit_type)"></i>
+                        </div>
+
+                        <!-- Node Info -->
+                        <div class="node-info">
+                          <div class="node-name">{{ grandchild.name }}</div>
+                          <div class="node-meta">
+                            <span class="node-code">{{ grandchild.code }}</span>
+                            <span class="node-users">{{ grandchild.users_count }} users</span>
+                          </div>
+                        </div>
+
+                        <!-- Node Actions -->
+                        <div class="node-actions" *ngIf="isManagerOrAdmin">
+                          <button 
+                            class="btn btn-icon btn-edit"
+                            (click)="onEditUnit(grandchild, $event)"
+                            title="Edit Unit">
+                            <i class="icon-edit"></i>
+                          </button>
+                          <button 
+                            class="btn btn-icon btn-delete"
+                            (click)="onDeleteUnit(grandchild, $event)"
+                            title="Delete Unit"
+                            *ngIf="isAdmin">
+                            <i class="icon-delete"></i>
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </ng-container>
+                </div>
+              </div>
+            </ng-container>
+          </div>
+        </div>
+      </ng-container>
+    </div>
+  </div>
+
+  <!-- Empty State -->
+  <div class="empty-state" *ngIf="!isLoading && hierarchyTree.length === 0">
+    <div class="empty-icon">
+      <i class="icon-tree"></i>
+    </div>
+    <h4>No organizational units found</h4>
+    <p>Create organizational units to see the hierarchy structure.</p>
+  </div>
+</div>

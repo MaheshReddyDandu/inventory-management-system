@@ -44,7 +44,7 @@ def send_verification_email(user_id: int, token: str):
         
         Please verify your email address by clicking the link below:
         
-        http://localhost:3000/verify-email?token={token}
+        http://localhost:4200/verify-email?token={token}
         
         This link will expire in 24 hours.
         
@@ -77,7 +77,7 @@ def send_password_reset_email(user_id: int, token: str):
         
         You have requested to reset your password. Click the link below to reset it:
         
-        http://localhost:3000/reset-password?token={token}
+        http://localhost:4200/reset-password?token={token}
         
         This link will expire in 1 hour.
         

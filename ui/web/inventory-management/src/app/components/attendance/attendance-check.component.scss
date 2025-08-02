@@ -1,0 +1,525 @@
+.attendance-check {
+  padding: 2rem;
+  max-width: 1200px;
+  margin: 0 auto;
+
+  // Header Section
+  .header-section {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 2rem;
+    
+    .title-area {
+      h1 {
+        font-size: 2rem;
+        font-weight: 700;
+        color: #1a202c;
+        margin: 0 0 0.5rem 0;
+      }
+      
+      .subtitle {
+        color: #64748b;
+        font-size: 1rem;
+        margin: 0;
+      }
+    }
+    
+    .actions-area {
+      .btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+      }
+    }
+  }
+
+  // Alert Messages
+  .alert {
+    padding: 1rem;
+    border-radius: 0.5rem;
+    margin-bottom: 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    
+    &.alert-success {
+      background-color: #dcfce7;
+      color: #166534;
+      border: 1px solid #bbf7d0;
+    }
+    
+    &.alert-error {
+      background-color: #fef2f2;
+      color: #dc2626;
+      border: 1px solid #fecaca;
+    }
+  }
+
+  // Status Card
+  .status-card {
+    background: white;
+    border-radius: 0.75rem;
+    box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
+    margin-bottom: 2rem;
+    overflow: hidden;
+
+    .status-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 1.5rem;
+      border-bottom: 1px solid #e5e7eb;
+      background: #f8fafc;
+
+      h3 {
+        font-size: 1.25rem;
+        font-weight: 600;
+        color: #1a202c;
+        margin: 0;
+      }
+
+      .status-date {
+        color: #64748b;
+        font-weight: 500;
+      }
+    }
+
+    .status-content {
+      padding: 1.5rem;
+
+      .status-info {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        margin-bottom: 1.5rem;
+
+        .status-badge {
+          padding: 0.5rem 1rem;
+          border-radius: 9999px;
+          font-size: 0.875rem;
+          font-weight: 600;
+          text-transform: uppercase;
+
+          &.status-present {
+            background: #dcfce7;
+            color: #166534;
+          }
+
+          &.status-late {
+            background: #fef3c7;
+            color: #d97706;
+          }
+
+          &.status-absent {
+            background: #fee2e2;
+            color: #dc2626;
+          }
+
+          &.status-remote {
+            background: #e0e7ff;
+            color: #3730a3;
+          }
+
+          &.status-weekend {
+            background: #f3f4f6;
+            color: #374151;
+          }
+        }
+
+        .work-type {
+          background: #f1f5f9;
+          color: #475569;
+          padding: 0.5rem 1rem;
+          border-radius: 0.5rem;
+          font-weight: 500;
+        }
+      }
+
+      .time-info {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+        gap: 1rem;
+        margin-bottom: 1.5rem;
+
+        .time-item {
+          label {
+            display: block;
+            font-size: 0.875rem;
+            color: #64748b;
+            margin-bottom: 0.25rem;
+            font-weight: 500;
+          }
+
+          .time {
+            font-size: 1.125rem;
+            font-weight: 600;
+            color: #1a202c;
+          }
+        }
+      }
+
+      .location-info,
+      .notes-info {
+        margin-bottom: 1rem;
+
+        label {
+          display: block;
+          font-size: 0.875rem;
+          color: #64748b;
+          margin-bottom: 0.25rem;
+          font-weight: 500;
+        }
+
+        .location,
+        .notes {
+          color: #1a202c;
+          line-height: 1.5;
+        }
+      }
+    }
+
+    .no-attendance {
+      padding: 3rem 2rem;
+      text-align: center;
+
+      .no-attendance-icon {
+        font-size: 3rem;
+        color: #d1d5db;
+        margin-bottom: 1rem;
+      }
+
+      h4 {
+        font-size: 1.125rem;
+        font-weight: 600;
+        color: #374151;
+        margin-bottom: 0.5rem;
+      }
+
+      p {
+        color: #6b7280;
+        margin: 0;
+      }
+    }
+  }
+
+  // Location Card
+  .location-card {
+    background: white;
+    border-radius: 0.75rem;
+    box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
+    margin-bottom: 2rem;
+    overflow: hidden;
+
+    .location-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 1.5rem;
+      border-bottom: 1px solid #e5e7eb;
+      background: #f8fafc;
+
+      h3 {
+        font-size: 1.125rem;
+        font-weight: 600;
+        color: #1a202c;
+        margin: 0;
+      }
+
+      .btn-icon {
+        width: 2rem;
+        height: 2rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border: 1px solid #d1d5db;
+        background: white;
+        border-radius: 0.375rem;
+        color: #6b7280;
+        cursor: pointer;
+        transition: all 0.2s;
+
+        &:hover {
+          background: #f9fafb;
+          color: #374151;
+        }
+
+        .spinning {
+          animation: spin 1s linear infinite;
+        }
+      }
+    }
+
+    .location-content {
+      padding: 1.5rem;
+
+      .coordinates,
+      .address {
+        margin-bottom: 0.75rem;
+        color: #374151;
+        line-height: 1.5;
+
+        strong {
+          color: #1a202c;
+        }
+      }
+    }
+
+    .no-location {
+      padding: 2rem;
+      text-align: center;
+
+      .no-location-icon {
+        font-size: 2.5rem;
+        color: #d1d5db;
+        margin-bottom: 1rem;
+      }
+
+      p {
+        color: #6b7280;
+        margin-bottom: 1rem;
+      }
+    }
+  }
+
+  // Action Cards
+  .action-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+    gap: 2rem;
+
+    .action-card {
+      background: white;
+      border-radius: 0.75rem;
+      box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
+      overflow: hidden;
+
+      &.completed {
+        border: 2px solid #10b981;
+        
+        .card-header {
+          background: #ecfdf5;
+          border-color: #a7f3d0;
+        }
+      }
+
+      .card-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 1.5rem;
+        border-bottom: 1px solid #e5e7eb;
+        background: #f8fafc;
+
+        h3 {
+          font-size: 1.125rem;
+          font-weight: 600;
+          color: #1a202c;
+          margin: 0;
+        }
+
+        .card-icon {
+          font-size: 1.5rem;
+          color: #6b7280;
+        }
+      }
+
+      .action-form {
+        padding: 1.5rem;
+
+        .form-group {
+          margin-bottom: 1.5rem;
+
+          label {
+            display: block;
+            font-weight: 500;
+            color: #374151;
+            margin-bottom: 0.5rem;
+          }
+
+          .form-input,
+          .form-select,
+          .form-textarea {
+            width: 100%;
+            padding: 0.75rem;
+            border: 1px solid #d1d5db;
+            border-radius: 0.375rem;
+            font-size: 1rem;
+            transition: border-color 0.2s, box-shadow 0.2s;
+
+            &:focus {
+              outline: none;
+              border-color: #3b82f6;
+              box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+            }
+
+            &.error {
+              border-color: #dc2626;
+
+              &:focus {
+                border-color: #dc2626;
+                box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.1);
+              }
+            }
+
+            &::placeholder {
+              color: #9ca3af;
+            }
+          }
+
+          .form-textarea {
+            resize: vertical;
+            min-height: 4rem;
+          }
+
+          .error-message {
+            color: #dc2626;
+            font-size: 0.875rem;
+            margin-top: 0.25rem;
+          }
+        }
+
+        .btn-full {
+          width: 100%;
+          justify-content: center;
+          gap: 0.5rem;
+          padding: 1rem;
+          font-size: 1rem;
+          font-weight: 600;
+        }
+      }
+
+      .completed-info {
+        padding: 1.5rem;
+
+        p {
+          color: #374151;
+          margin-bottom: 1.5rem;
+          text-align: center;
+        }
+
+        .work-summary {
+          background: #f8fafc;
+          padding: 1rem;
+          border-radius: 0.5rem;
+
+          .summary-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.5rem 0;
+            border-bottom: 1px solid #e5e7eb;
+
+            &:last-child {
+              border-bottom: none;
+            }
+
+            strong {
+              color: #1a202c;
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
+// Button Styles
+.btn {
+  padding: 0.75rem 1rem;
+  border-radius: 0.375rem;
+  font-weight: 500;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+  border: 1px solid transparent;
+  cursor: pointer;
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  &.btn-primary {
+    background: #3b82f6;
+    color: white;
+
+    &:hover:not(:disabled) {
+      background: #2563eb;
+    }
+  }
+
+  &.btn-secondary {
+    background: #f3f4f6;
+    color: #374151;
+    border-color: #d1d5db;
+
+    &:hover:not(:disabled) {
+      background: #e5e7eb;
+    }
+  }
+
+  &.btn-warning {
+    background: #f59e0b;
+    color: white;
+
+    &:hover:not(:disabled) {
+      background: #d97706;
+    }
+  }
+
+  &.btn-sm {
+    padding: 0.5rem 0.75rem;
+    font-size: 0.875rem;
+  }
+}
+
+// Spinner
+.spinner-sm {
+  width: 1rem;
+  height: 1rem;
+  border: 2px solid transparent;
+  border-top: 2px solid currentColor;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin-right: 0.5rem;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+// Responsive Design
+@media (max-width: 1024px) {
+  .attendance-check {
+    padding: 1rem;
+
+    .header-section {
+      flex-direction: column;
+      gap: 1rem;
+    }
+
+    .action-cards {
+      grid-template-columns: 1fr;
+    }
+  }
+}
+
+@media (max-width: 768px) {
+  .attendance-check {
+    .status-card .status-content .time-info {
+      grid-template-columns: 1fr;
+    }
+
+    .location-card .location-header {
+      padding: 1rem;
+    }
+
+    .action-cards .action-card .action-form {
+      padding: 1rem;
+    }
+  }
+}

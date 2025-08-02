@@ -1,0 +1,317 @@
+.hierarchy-container {
+  background: white;
+  border-radius: 0.75rem;
+  border: 1px solid #e5e7eb;
+  overflow: hidden;
+
+  .hierarchy-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem 1.5rem;
+    border-bottom: 1px solid #e5e7eb;
+    background: #f8fafc;
+
+    h3 {
+      font-size: 1.125rem;
+      font-weight: 600;
+      color: #1a202c;
+      margin: 0;
+    }
+
+    .hierarchy-actions {
+      .btn-icon {
+        width: 2rem;
+        height: 2rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border: 1px solid #d1d5db;
+        background: white;
+        border-radius: 0.375rem;
+        color: #6b7280;
+        cursor: pointer;
+        transition: all 0.2s;
+
+        &:hover {
+          background: #f9fafb;
+          color: #374151;
+        }
+      }
+    }
+  }
+
+  .alert {
+    padding: 1rem 1.5rem;
+    background: #fef2f2;
+    color: #dc2626;
+    border-bottom: 1px solid #fecaca;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .loading-state {
+    text-align: center;
+    padding: 2rem;
+
+    .spinner {
+      width: 2rem;
+      height: 2rem;
+      border: 2px solid #e5e7eb;
+      border-top: 2px solid #3b82f6;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin: 0 auto 1rem auto;
+    }
+
+    p {
+      color: #64748b;
+      margin: 0;
+    }
+  }
+
+  .hierarchy-tree {
+    max-height: 600px;
+    overflow-y: auto;
+
+    .tree-container {
+      padding: 0.5rem 0;
+    }
+
+    .tree-node {
+      border-bottom: 1px solid #f3f4f6;
+
+      &:last-child {
+        border-bottom: none;
+      }
+
+      &.selected {
+        background: #eff6ff;
+        
+        .node-content {
+          background: #dbeafe;
+        }
+      }
+
+      &.child-node {
+        .node-content {
+          background: #f9fafb;
+        }
+
+        &.selected .node-content {
+          background: #bfdbfe;
+        }
+      }
+
+      .node-content {
+        display: flex;
+        align-items: center;
+        padding: 0.75rem 1rem;
+        cursor: pointer;
+        transition: background-color 0.2s;
+        gap: 0.5rem;
+
+        &:hover {
+          background: #f9fafb;
+        }
+
+        .expand-btn {
+          width: 1.5rem;
+          height: 1.5rem;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          border: none;
+          background: none;
+          border-radius: 0.25rem;
+          color: #6b7280;
+          cursor: pointer;
+          transition: all 0.2s;
+
+          &:hover {
+            background: #e5e7eb;
+            color: #374151;
+          }
+
+          .icon-chevron {
+            font-size: 0.75rem;
+            transition: transform 0.2s;
+
+            &.expanded {
+              transform: rotate(90deg);
+            }
+          }
+        }
+
+        .expand-spacer {
+          width: 1.5rem;
+          height: 1.5rem;
+        }
+
+        .node-icon {
+          width: 2rem;
+          height: 2rem;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          border-radius: 0.375rem;
+          font-size: 1rem;
+
+          &.node-type-branch {
+            background: #dbeafe;
+            color: #1e40af;
+          }
+
+          &.node-type-client {
+            background: #ecfdf5;
+            color: #059669;
+          }
+
+          &.node-type-department {
+            background: #fef3c7;
+            color: #d97706;
+          }
+
+          &.node-type-project {
+            background: #f3e8ff;
+            color: #7c3aed;
+          }
+        }
+
+        .node-info {
+          flex: 1;
+          min-width: 0;
+
+          .node-name {
+            font-weight: 500;
+            color: #1a202c;
+            margin-bottom: 0.25rem;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+          }
+
+          .node-meta {
+            display: flex;
+            gap: 0.75rem;
+            font-size: 0.875rem;
+            color: #64748b;
+
+            .node-code {
+              font-family: 'Courier New', monospace;
+              background: #f1f5f9;
+              padding: 0.125rem 0.375rem;
+              border-radius: 0.25rem;
+              font-size: 0.75rem;
+            }
+
+            .node-users {
+              &::before {
+                content: '👥 ';
+              }
+            }
+          }
+        }
+
+        .node-actions {
+          display: flex;
+          gap: 0.25rem;
+          opacity: 0;
+          transition: opacity 0.2s;
+
+          .btn-icon {
+            width: 1.5rem;
+            height: 1.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 1px solid #d1d5db;
+            background: white;
+            border-radius: 0.25rem;
+            color: #6b7280;
+            font-size: 0.75rem;
+            cursor: pointer;
+            transition: all 0.2s;
+
+            &:hover {
+              background: #f9fafb;
+            }
+
+            &.btn-edit:hover {
+              background: #dbeafe;
+              color: #2563eb;
+              border-color: #93c5fd;
+            }
+
+            &.btn-delete:hover {
+              background: #fee2e2;
+              color: #dc2626;
+              border-color: #fecaca;
+            }
+          }
+        }
+
+        &:hover .node-actions {
+          opacity: 1;
+        }
+      }
+
+      .child-nodes {
+        border-left: 2px solid #e5e7eb;
+        margin-left: 2rem;
+      }
+    }
+  }
+
+  .empty-state {
+    text-align: center;
+    padding: 3rem 2rem;
+
+    .empty-icon {
+      font-size: 3rem;
+      color: #d1d5db;
+      margin-bottom: 1rem;
+    }
+
+    h4 {
+      font-size: 1.125rem;
+      font-weight: 600;
+      color: #374151;
+      margin-bottom: 0.5rem;
+    }
+
+    p {
+      color: #6b7280;
+      margin: 0;
+    }
+  }
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+// Responsive Design
+@media (max-width: 768px) {
+  .hierarchy-container {
+    .hierarchy-tree {
+      max-height: 400px;
+
+      .tree-node .node-content {
+        padding: 0.5rem;
+        font-size: 0.875rem;
+
+        .node-info .node-meta {
+          flex-direction: column;
+          gap: 0.25rem;
+        }
+      }
+
+      .tree-node .child-nodes {
+        margin-left: 1rem;
+      }
+    }
+  }
+}

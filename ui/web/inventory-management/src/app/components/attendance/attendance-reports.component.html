@@ -1,0 +1,285 @@
+<div class="attendance-reports">
+  <!-- Header Section -->
+  <div class="header-section">
+    <div class="title-area">
+      <h1>Attendance Reports</h1>
+      <p class="subtitle">View comprehensive attendance analytics and reports</p>
+    </div>
+    
+    <div class="actions-area" *ngIf="isManagerOrAdmin">
+      <button 
+        class="btn btn-secondary"
+        (click)="exportToCSV()"
+        [disabled]="isLoading || reports.length === 0">
+        <i class="icon-download"></i>
+        Export CSV
+      </button>
+    </div>
+  </div>
+
+  <!-- Alert Messages -->
+  <div class="alert alert-error" *ngIf="errorMessage">
+    <i class="icon-error"></i>
+    {{ errorMessage }}
+  </div>
+
+  <!-- Filters Section -->
+  <div class="filters-section">
+    <div class="period-filters">
+      <h3>Time Period</h3>
+      <div class="period-buttons">
+        <button 
+          class="btn"
+          [class]="selectedPeriod === 'today' ? 'btn-primary' : 'btn-secondary'"
+          (click)="setPeriod('today')">
+          Today
+        </button>
+        <button 
+          class="btn"
+          [class]="selectedPeriod === 'week' ? 'btn-primary' : 'btn-secondary'"
+          (click)="setPeriod('week')">
+          Last Week
+        </button>
+        <button 
+          class="btn"
+          [class]="selectedPeriod === 'month' ? 'btn-primary' : 'btn-secondary'"
+          (click)="setPeriod('month')">
+          Last Month
+        </button>
+        <button 
+          class="btn"
+          [class]="selectedPeriod === 'quarter' ? 'btn-primary' : 'btn-secondary'"
+          (click)="setPeriod('quarter')">
+          Last Quarter
+        </button>
+      </div>
+    </div>
+
+    <form [formGroup]="filterForm" class="filter-form">
+      <div class="filter-grid">
+        <div class="form-group">
+          <label for="start_date">Start Date</label>
+          <input 
+            type="date"
+            id="start_date"
+            class="form-input"
+            formControlName="start_date"
+            (change)="onFilterChange()">
+        </div>
+        
+        <div class="form-group">
+          <label for="end_date">End Date</label>
+          <input 
+            type="date"
+            id="end_date"
+            class="form-input"
+            formControlName="end_date"
+            (change)="onFilterChange()">
+        </div>
+        
+        <div class="form-group" *ngIf="isManagerOrAdmin">
+          <label for="organizational_unit_id">Unit</label>
+          <select 
+            id="organizational_unit_id"
+            class="form-select"
+            formControlName="organizational_unit_id"
+            (change)="onFilterChange()">
+            <option value="">All Units</option>
+            <option *ngFor="let unit of organizationalUnits" [value]="unit.id">
+              {{ unit.name }}
+            </option>
+          </select>
+        </div>
+        
+        <div class="form-group">
+          <label for="status">Status</label>
+          <select 
+            id="status"
+            class="form-select"
+            formControlName="status"
+            (change)="onFilterChange()">
+            <option value="">All Statuses</option>
+            <option value="present">Present</option>
+            <option value="late">Late</option>
+            <option value="absent">Absent</option>
+            <option value="early_departure">Early Departure</option>
+            <option value="overtime">Overtime</option>
+          </select>
+        </div>
+        
+        <div class="form-group">
+          <label for="work_type">Work Type</label>
+          <select 
+            id="work_type"
+            class="form-select"
+            formControlName="work_type"
+            (change)="onFilterChange()">
+            <option value="">All Types</option>
+            <option value="office">Office</option>
+            <option value="remote">Remote</option>
+            <option value="hybrid">Hybrid</option>
+          </select>
+        </div>
+      </div>
+    </form>
+  </div>
+
+  <!-- Summary Statistics -->
+  <div class="summary-section" *ngIf="reports.length > 0">
+    <h3>Summary Statistics</h3>
+    <div class="summary-grid">
+      <div class="summary-card">
+        <div class="summary-icon">
+          <i class="icon-calendar"></i>
+        </div>
+        <div class="summary-content">
+          <div class="summary-value">{{ summaryStats.totalDays }}</div>
+          <div class="summary-label">Total Days</div>
+        </div>
+      </div>
+
+      <div class="summary-card">
+        <div class="summary-icon present">
+          <i class="icon-check"></i>
+        </div>
+        <div class="summary-content">
+          <div class="summary-value">{{ summaryStats.presentDays }}</div>
+          <div class="summary-label">Present Days</div>
+        </div>
+      </div>
+
+      <div class="summary-card">
+        <div class="summary-icon late">
+          <i class="icon-clock"></i>
+        </div>
+        <div class="summary-content">
+          <div class="summary-value">{{ summaryStats.lateDays }}</div>
+          <div class="summary-label">Late Days</div>
+        </div>
+      </div>
+
+      <div class="summary-card">
+        <div class="summary-icon absent">
+          <i class="icon-x"></i>
+        </div>
+        <div class="summary-content">
+          <div class="summary-value">{{ summaryStats.absentDays }}</div>
+          <div class="summary-label">Absent Days</div>
+        </div>
+      </div>
+
+      <div class="summary-card">
+        <div class="summary-icon">
+          <i class="icon-time"></i>
+        </div>
+        <div class="summary-content">
+          <div class="summary-value">{{ formatDuration(summaryStats.totalHours) }}</div>
+          <div class="summary-label">Total Hours</div>
+        </div>
+      </div>
+
+      <div class="summary-card">
+        <div class="summary-icon">
+          <i class="icon-chart"></i>
+        </div>
+        <div class="summary-content">
+          <div class="summary-value">{{ formatDuration(summaryStats.averageHours) }}</div>
+          <div class="summary-label">Average Hours/Day</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Loading State -->
+  <div class="loading-state" *ngIf="isLoading">
+    <div class="spinner"></div>
+    <p>Loading attendance reports...</p>
+  </div>
+
+  <!-- Reports Table -->
+  <div class="reports-section" *ngIf="!isLoading">
+    <div class="table-container">
+      <div class="table-responsive">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th *ngIf="isManagerOrAdmin">User</th>
+              <th *ngIf="isManagerOrAdmin">Unit</th>
+              <th>Check In</th>
+              <th>Check Out</th>
+              <th>Status</th>
+              <th>Work Type</th>
+              <th>Hours</th>
+              <th>Notes</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let report of reports; trackBy: trackByReport" class="table-row">
+              <td>
+                <span class="date">{{ formatDate(report.date) }}</span>
+              </td>
+              <td *ngIf="isManagerOrAdmin">
+                <div class="user-info">
+                  <div class="user-name">{{ report.user_name || 'User ' + report.user_id }}</div>
+                  <div class="user-id">ID: {{ report.user_id }}</div>
+                </div>
+              </td>
+              <td *ngIf="isManagerOrAdmin">
+                <span class="unit-name">{{ getUnitName(report.organizational_unit_id) }}</span>
+              </td>
+              <td>
+                <span *ngIf="report.check_in_time; else noCheckIn" class="time">
+                  {{ formatTime(report.check_in_time) }}
+                </span>
+                <ng-template #noCheckIn>
+                  <span class="no-time">--</span>
+                </ng-template>
+              </td>
+              <td>
+                <span *ngIf="report.check_out_time; else noCheckOut" class="time">
+                  {{ formatTime(report.check_out_time) }}
+                </span>
+                <ng-template #noCheckOut>
+                  <span class="no-time">--</span>
+                </ng-template>
+              </td>
+              <td>
+                <span class="status-badge" [class]="getStatusClass(report.status)">
+                  <i [class]="getStatusIcon(report.status)"></i>
+                  {{ report.status }}
+                </span>
+              </td>
+              <td>
+                <span class="work-type-badge">
+                  <i [class]="getWorkTypeIcon(report.work_type)"></i>
+                  {{ report.work_type }}
+                </span>
+              </td>
+              <td>
+                <span class="hours">{{ formatDuration(report.total_hours || 0) }}</span>
+              </td>
+              <td>
+                <span *ngIf="report.notes; else noNotes" class="notes">
+                  {{ report.notes }}
+                </span>
+                <ng-template #noNotes>
+                  <span class="no-notes">--</span>
+                </ng-template>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+        
+        <!-- Empty State -->
+        <div class="empty-state" *ngIf="reports.length === 0">
+          <div class="empty-icon">
+            <i class="icon-chart"></i>
+          </div>
+          <h3>No attendance data found</h3>
+          <p>Try adjusting your filters or date range to see attendance reports.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

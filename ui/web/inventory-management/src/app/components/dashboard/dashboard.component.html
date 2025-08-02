@@ -1,131 +1,195 @@
-<div class="dashboard-container">
-  <!-- Header -->
-  <header class="dashboard-header">
-    <div class="header-content">
-      <div class="header-left">
-        <h1 class="dashboard-title">Dashboard</h1>
-        <p class="welcome-text">Welcome back, {{ currentUser?.first_name || 'User' }}!</p>
-      </div>
-      <div class="header-right">
-        <div class="user-info">
-          <span class="user-name">{{ currentUser?.first_name }} {{ currentUser?.last_name }}</span>
-          <span class="user-role">{{ currentUser?.role?.name }}</span>
+<div class="dashboard">
+  <!-- Header Section -->
+  <div class="dashboard-header">
+    <div class="welcome-section">
+      <h1>{{ getGreeting() }}, {{ currentUserName }}!</h1>
+      <p class="subtitle">Welcome to your inventory management dashboard</p>
+    </div>
+    
+    <div class="user-actions">
+      <button class="btn btn-secondary" (click)="goToChangePassword()">
+        <i class="icon-key"></i>
+        Change Password
+      </button>
+      <button class="btn btn-danger" (click)="logout()">
+        <i class="icon-logout"></i>
+        Logout
+      </button>
+    </div>
+  </div>
+
+  <!-- Today's Attendance Widget -->
+  <div class="attendance-widget" *ngIf="currentUser">
+    <div class="widget-header">
+      <h3>Today's Attendance</h3>
+      <span class="attendance-status" [class]="getAttendanceStatusClass()">
+        {{ getAttendanceStatus() }}
+      </span>
+    </div>
+    
+    <div class="attendance-details" *ngIf="todayAttendance; else noAttendanceToday">
+      <div class="time-info">
+        <div class="time-item" *ngIf="todayAttendance.check_in_time">
+          <label>Check In</label>
+          <span>{{ formatTime(todayAttendance.check_in_time) }}</span>
         </div>
-        <button class="logout-btn" (click)="logout()">
-          <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M9 21H5C4.46957 21 3.96086 20.7893 3.58579 20.4142C3.21071 20.0391 3 19.5304 3 19V5C3 4.46957 3.21071 3.96086 3.58579 3.58579C3.96086 3.21071 4.46957 3 5 3H9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-            <path d="M16 17L21 12L16 7" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-            <path d="M21 12H9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-          </svg>
-          Logout
+        <div class="time-item" *ngIf="todayAttendance.check_out_time">
+          <label>Check Out</label>
+          <span>{{ formatTime(todayAttendance.check_out_time) }}</span>
+        </div>
+        <div class="time-item">
+          <label>Duration</label>
+          <span>{{ getWorkDuration() }}</span>
+        </div>
+      </div>
+      <div class="attendance-actions">
+        <button class="btn btn-primary btn-sm" (click)="navigateToAction('/attendance/check')">
+          <i class="icon-calendar"></i>
+          {{ todayAttendance.check_out_time ? 'View Details' : 'Check Out' }}
         </button>
-        <button class="change-password-btn" (click)="goToChangePassword()">
-          <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M12 17V21" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-            <path d="M7 21H17" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-            <path d="M12 3V17" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-          </svg>
-          Change Password
-        </button>
-        <ng-container *ngIf="currentUser?.role?.name === 'admin'">
-          <button class="admin-btn" (click)="goToAdminUsers()">Admin Users</button>
-          <button class="admin-btn" (click)="goToAdminRoles()">Admin Roles</button>
-        </ng-container>
       </div>
     </div>
-  </header>
 
-  <!-- Main Content -->
-  <main class="dashboard-main">
-    <div class="dashboard-grid">
-      <!-- Quick Stats -->
-      <div class="stats-section">
-        <h2>Quick Stats</h2>
-        <div class="stats-grid">
-          <div class="stat-card">
-            <div class="stat-icon">📦</div>
-            <div class="stat-content">
-              <div class="stat-number">1,247</div>
-              <div class="stat-label">Total Items</div>
-            </div>
-          </div>
-          <div class="stat-card">
-            <div class="stat-icon">💰</div>
-            <div class="stat-content">
-              <div class="stat-number">$45.2K</div>
-              <div class="stat-label">Total Value</div>
-            </div>
-          </div>
-          <div class="stat-card">
-            <div class="stat-icon">⚠️</div>
-            <div class="stat-content">
-              <div class="stat-number">23</div>
-              <div class="stat-label">Low Stock</div>
-            </div>
-          </div>
-          <div class="stat-card">
-            <div class="stat-icon">📈</div>
-            <div class="stat-content">
-              <div class="stat-number">+12%</div>
-              <div class="stat-label">Growth</div>
-            </div>
-          </div>
+    <ng-template #noAttendanceToday>
+      <div class="no-attendance">
+        <p>You haven't checked in today</p>
+        <button class="btn btn-primary btn-sm" (click)="navigateToAction('/attendance/check')">
+          <i class="icon-login"></i>
+          Check In Now
+        </button>
+      </div>
+    </ng-template>
+  </div>
+
+  <!-- Statistics Cards (for managers and admins) -->
+  <div class="stats-section" *ngIf="isManagerOrAdmin">
+    <h2>Organization Overview</h2>
+    
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-header">
+          <h3>Total Users</h3>
+          <i class="icon-users stat-icon"></i>
         </div>
+        <div class="stat-value">{{ stats.totalUsers }}</div>
+        <div class="stat-description">Active system users</div>
       </div>
 
-      <!-- Recent Activity -->
-      <div class="activity-section">
-        <h2>Recent Activity</h2>
-        <div class="activity-list">
-          <div class="activity-item">
-            <div class="activity-icon">➕</div>
-            <div class="activity-content">
-              <div class="activity-title">New item added</div>
-              <div class="activity-desc">Laptop Chargers - 50 units</div>
-              <div class="activity-time">2 hours ago</div>
-            </div>
-          </div>
-          <div class="activity-item">
-            <div class="activity-icon">📤</div>
-            <div class="activity-content">
-              <div class="activity-title">Item shipped</div>
-              <div class="activity-desc">Office Chairs - 5 units</div>
-              <div class="activity-time">4 hours ago</div>
-            </div>
-          </div>
-          <div class="activity-item">
-            <div class="activity-icon">⚠️</div>
-            <div class="activity-content">
-              <div class="activity-title">Low stock alert</div>
-              <div class="activity-desc">Coffee Beans - 8 units remaining</div>
-              <div class="activity-time">6 hours ago</div>
-            </div>
-          </div>
+      <div class="stat-card">
+        <div class="stat-header">
+          <h3>Organizational Units</h3>
+          <i class="icon-organization stat-icon"></i>
         </div>
+        <div class="stat-value">{{ stats.totalUnits }}</div>
+        <div class="stat-description">Branches, departments & projects</div>
       </div>
 
-      <!-- Quick Actions -->
-      <div class="actions-section">
-        <h2>Quick Actions</h2>
-        <div class="actions-grid">
-          <button class="action-btn">
-            <span class="action-icon">➕</span>
-            <span class="action-text">Add Item</span>
-          </button>
-          <button class="action-btn">
-            <span class="action-icon">📤</span>
-            <span class="action-text">Ship Item</span>
-          </button>
-          <button class="action-btn">
-            <span class="action-icon">📊</span>
-            <span class="action-text">View Reports</span>
-          </button>
-          <button class="action-btn">
-            <span class="action-icon">⚙️</span>
-            <span class="action-text">Settings</span>
-          </button>
+      <div class="stat-card">
+        <div class="stat-header">
+          <h3>Today's Attendance</h3>
+          <i class="icon-calendar stat-icon"></i>
+        </div>
+        <div class="stat-value">{{ stats.todayAttendance }}</div>
+        <div class="stat-description">Users checked in today</div>
+      </div>
+
+      <div class="stat-card">
+        <div class="stat-header">
+          <h3>Currently At Work</h3>
+          <i class="icon-clock stat-icon"></i>
+        </div>
+        <div class="stat-value">{{ stats.checkedInUsers }}</div>
+        <div class="stat-description">Users currently checked in</div>
+      </div>
+
+      <div class="stat-card">
+        <div class="stat-header">
+          <h3>Late Arrivals</h3>
+          <i class="icon-warning stat-icon"></i>
+        </div>
+        <div class="stat-value">{{ stats.lateUsers }}</div>
+        <div class="stat-description">Late check-ins today</div>
+      </div>
+
+      <div class="stat-card">
+        <div class="stat-header">
+          <h3>Remote Workers</h3>
+          <i class="icon-home stat-icon"></i>
+        </div>
+        <div class="stat-value">{{ stats.remoteUsers }}</div>
+        <div class="stat-description">Working remotely today</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Quick Actions -->
+  <div class="quick-actions-section">
+    <h2>Quick Actions</h2>
+    
+    <div class="actions-grid">
+      <div class="action-card" 
+           *ngFor="let action of getAvailableActions()"
+           (click)="navigateToAction(action.route)"
+           [class]="'action-' + action.color">
+        <div class="action-icon">
+          <i [class]="action.icon"></i>
+        </div>
+        <div class="action-content">
+          <h3>{{ action.title }}</h3>
+          <p>{{ action.description }}</p>
+        </div>
+        <div class="action-arrow">
+          <i class="icon-arrow-right"></i>
         </div>
       </div>
     </div>
-  </main>
+  </div>
+
+  <!-- Recent Activity (for managers and admins) -->
+  <div class="recent-activity-section" *ngIf="isManagerOrAdmin && recentAttendance.length > 0">
+    <h2>Recent Attendance Activity</h2>
+    
+    <div class="activity-list">
+      <div class="activity-item" *ngFor="let attendance of recentAttendance">
+        <div class="activity-avatar">
+          <i class="icon-user"></i>
+        </div>
+        <div class="activity-content">
+          <div class="activity-header">
+            <strong>User {{ attendance.user_id }}</strong>
+            <span class="activity-status" [class]="'status-' + attendance.attendance_status">
+              {{ attendance.attendance_status }}
+            </span>
+          </div>
+          <div class="activity-details">
+            <span *ngIf="attendance.check_in_time">
+              Checked in at {{ formatTime(attendance.check_in_time) }}
+            </span>
+            <span *ngIf="attendance.check_out_time">
+              • Checked out at {{ formatTime(attendance.check_out_time) }}
+            </span>
+            <span class="work-type">({{ attendance.work_type }})</span>
+          </div>
+        </div>
+        <div class="activity-time">
+          {{ formatTime(attendance.created_at) }}
+        </div>
+      </div>
+    </div>
+    
+    <div class="activity-footer">
+      <button class="btn btn-secondary" (click)="navigateToAction('/attendance/reports')">
+        <i class="icon-chart"></i>
+        View Full Reports
+      </button>
+    </div>
+  </div>
+
+  <!-- Loading State -->
+  <div class="loading-overlay" *ngIf="isLoading">
+    <div class="loading-content">
+      <div class="spinner"></div>
+      <p>Loading dashboard data...</p>
+    </div>
+  </div>
 </div> 

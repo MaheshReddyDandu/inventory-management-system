@@ -3,13 +3,20 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 import time
 from app.api.v1 import auth, health
+from app.api.v1 import organization as org_api
 from app.core.database import engine
-from app.models import user
+from app.models import user, organization
+from app.models.user import User, Role, RefreshToken, PasswordReset
+from app.models.organization import (
+    OrganizationalUnit, UserAssignment, OrganizationalUnitMetadata,
+    OfficeLocation, AttendanceRule, Attendance
+)
 from app.utils.performance import create_performance_indexes, setup_database_maintenance
 from app.utils.metrics import metrics_collector
 
 # Create database tables
 user.Base.metadata.create_all(bind=engine)
+organization.Base.metadata.create_all(bind=engine)
 
 # Setup performance optimizations
 try:
@@ -36,6 +43,7 @@ app.add_middleware(
 # Include routers
 app.include_router(auth.router, prefix="/api/v1/auth", tags=["authentication"])
 app.include_router(health.router, prefix="/health", tags=["health"])
+app.include_router(org_api.router, prefix="/api/v1/organization", tags=["organization"])
 
 @app.middleware("http")
 async def add_process_time_header(request: Request, call_next):

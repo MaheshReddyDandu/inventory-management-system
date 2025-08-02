@@ -35,8 +35,9 @@ export class ResetPasswordComponent implements OnInit {
 
   private initForm(): void {
     this.resetPasswordForm = this.fb.group({
-      new_password: ['', [Validators.required, Validators.minLength(8), this.passwordStrengthValidator()]]
-    });
+      password: ['', [Validators.required, Validators.minLength(8), this.passwordStrengthValidator()]],
+      confirm_password: ['', [Validators.required]]
+    }, { validator: this.passwordsMatchValidator });
   }
 
   private getTokenFromUrl(): void {
@@ -67,15 +68,21 @@ export class ResetPasswordComponent implements OnInit {
     };
   }
 
+  passwordsMatchValidator(group: FormGroup): ValidationErrors | null {
+    const password = group.get('password')?.value;
+    const confirmPassword = group.get('confirm_password')?.value;
+    return password === confirmPassword ? null : { passwordsMismatch: true };
+  }
+
   onSubmit(): void {
     if (this.resetPasswordForm.valid && this.token) {
       this.isLoading = true;
       this.errorMessage = '';
       this.successMessage = '';
 
-      const { new_password } = this.resetPasswordForm.value;
+      const password = this.resetPasswordForm.value.password;
 
-      this.authService.resetPassword(this.token, new_password).subscribe({
+      this.authService.resetPassword(this.token, password).subscribe({
         next: (response) => {
           this.successMessage = 'Password reset successfully! Redirecting to login...';
           this.isLoading = false;
@@ -123,11 +130,15 @@ export class ResetPasswordComponent implements OnInit {
       return `${controlName.replace('_', ' ').charAt(0).toUpperCase() + controlName.replace('_', ' ').slice(1)} must be at least ${control.errors?.['minlength'].requiredLength} characters`;
     }
 
-    if (controlName === 'new_password' && control?.errors) {
+    if (controlName === 'password' && control?.errors) {
       const errors = control.errors;
       if (errors['missingUpperCase']) return 'Password must contain at least one uppercase letter';
       if (errors['missingLowerCase']) return 'Password must contain at least one lowercase letter';
       if (errors['missingNumbers']) return 'Password must contain at least one number';
+    }
+
+    if (controlName === 'confirm_password' && control?.hasError('passwordsMismatch')) {
+      return 'Passwords do not match';
     }
     
     return '';
@@ -144,7 +155,7 @@ export class ResetPasswordComponent implements OnInit {
   }
 
   getPasswordStrength(): { score: number; label: string; color: string } {
-    const password = this.resetPasswordForm.get('new_password')?.value;
+    const password = this.resetPasswordForm.get('password')?.value;
     if (!password) return { score: 0, label: '', color: '' };
 
     let score = 0;

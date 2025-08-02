@@ -1,0 +1,275 @@
+// Use shared styles
+@use './organization-management.component.scss';
+
+.office-location {
+  padding: 2rem;
+  max-width: 1200px;
+  margin: 0 auto;
+
+  // Location info card
+  .location-info-card {
+    background: #ecfdf5;
+    border: 1px solid #bbf7d0;
+    border-radius: 0.5rem;
+    padding: 1rem;
+    margin-bottom: 2rem;
+
+    .location-info-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+
+      h3 {
+        color: #166534;
+        margin: 0;
+        font-size: 1rem;
+        font-weight: 600;
+      }
+
+      .coordinates {
+        font-family: 'Courier New', monospace;
+        color: #059669;
+        font-size: 0.875rem;
+        font-weight: 500;
+      }
+    }
+  }
+
+  // Locations grid
+  .locations-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+    gap: 1.5rem;
+
+    .location-card {
+      background: white;
+      border-radius: 0.75rem;
+      box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
+      border: 1px solid #e5e7eb;
+      overflow: hidden;
+      transition: all 0.2s;
+
+      &:hover {
+        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+      }
+
+      &.within-range {
+        border-color: #10b981;
+        box-shadow: 0 0 0 1px #10b981;
+
+        .location-header {
+          background: #ecfdf5;
+        }
+      }
+
+      .location-header {
+        padding: 1.5rem;
+        border-bottom: 1px solid #e5e7eb;
+        background: #f8fafc;
+
+        .location-title {
+          display: flex;
+          justify-content: space-between;
+          align-items: flex-start;
+          margin-bottom: 1rem;
+
+          h3 {
+            font-size: 1.125rem;
+            font-weight: 600;
+            color: #1a202c;
+            margin: 0;
+            flex: 1;
+          }
+
+          .status-badge {
+            padding: 0.25rem 0.75rem;
+            border-radius: 9999px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            margin-left: 1rem;
+
+            &.status-active {
+              background: #dcfce7;
+              color: #166534;
+            }
+
+            &.status-inactive {
+              background: #fee2e2;
+              color: #dc2626;
+            }
+          }
+        }
+
+        .location-actions {
+          display: flex;
+          gap: 0.5rem;
+
+          .btn-icon {
+            width: 2rem;
+            height: 2rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 1px solid #d1d5db;
+            background: white;
+            border-radius: 0.375rem;
+            color: #6b7280;
+            cursor: pointer;
+            transition: all 0.2s;
+
+            &:hover {
+              background: #f9fafb;
+            }
+
+            &.btn-map:hover {
+              background: #ecfdf5;
+              color: #059669;
+              border-color: #bbf7d0;
+            }
+
+            &.btn-edit:hover {
+              background: #dbeafe;
+              color: #2563eb;
+              border-color: #93c5fd;
+            }
+
+            &.btn-delete:hover {
+              background: #fee2e2;
+              color: #dc2626;
+              border-color: #fecaca;
+            }
+          }
+        }
+      }
+
+      .location-content {
+        padding: 1.5rem;
+
+        > div {
+          display: flex;
+          align-items: center;
+          gap: 0.75rem;
+          margin-bottom: 1rem;
+
+          &:last-child {
+            margin-bottom: 0;
+          }
+
+          i {
+            width: 1.25rem;
+            height: 1.25rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #6b7280;
+            flex-shrink: 0;
+          }
+
+          span {
+            color: #374151;
+            line-height: 1.5;
+          }
+        }
+
+        .location-address {
+          i {
+            color: #dc2626;
+          }
+        }
+
+        .location-coordinates {
+          span {
+            font-family: 'Courier New', monospace;
+            font-size: 0.875rem;
+          }
+
+          i {
+            color: #3b82f6;
+          }
+        }
+
+        .location-radius {
+          i {
+            color: #f59e0b;
+          }
+        }
+
+        .location-unit {
+          i {
+            color: #7c3aed;
+          }
+        }
+
+        .location-distance {
+          i {
+            color: #10b981;
+          }
+
+          .within-range-indicator {
+            margin-left: auto;
+            color: #10b981;
+            font-weight: 600;
+            font-size: 0.875rem;
+          }
+        }
+      }
+    }
+
+    // Empty state specific to grid
+    .empty-state {
+      grid-column: 1 / -1;
+      text-align: center;
+      padding: 4rem 2rem;
+
+      .empty-icon {
+        font-size: 4rem;
+        color: #d1d5db;
+        margin-bottom: 1rem;
+      }
+
+      h3 {
+        font-size: 1.25rem;
+        font-weight: 600;
+        color: #374151;
+        margin-bottom: 0.5rem;
+      }
+
+      p {
+        color: #6b7280;
+        margin-bottom: 1.5rem;
+      }
+    }
+  }
+
+  // Modal form specific styles
+  .modal-form {
+    .form-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 2rem;
+
+      @media (max-width: 768px) {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .coordinates-actions {
+      margin-bottom: 1rem;
+    }
+  }
+}
+
+// Responsive design
+@media (max-width: 768px) {
+  .office-location {
+    .locations-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .location-info-card .location-info-header {
+      flex-direction: column;
+      gap: 0.5rem;
+      align-items: flex-start;
+    }
+  }
+}

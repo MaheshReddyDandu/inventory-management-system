@@ -28,6 +28,8 @@ class User(Base):
     role = relationship("Role", back_populates="users")
     refresh_tokens = relationship("RefreshToken", back_populates="user", cascade="all, delete-orphan")
     password_resets = relationship("PasswordReset", back_populates="user", cascade="all, delete-orphan")
+    assignments = relationship("UserAssignment", back_populates="user", cascade="all, delete-orphan")
+    attendance_records = relationship("Attendance", back_populates="user", cascade="all, delete-orphan")
     
     # Composite indexes and constraints for multi-tenant
     __table_args__ = (

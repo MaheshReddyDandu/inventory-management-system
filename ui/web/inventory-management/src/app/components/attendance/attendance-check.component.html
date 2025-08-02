@@ -1,0 +1,257 @@
+<div class="attendance-check">
+  <!-- Header Section -->
+  <div class="header-section">
+    <div class="title-area">
+      <h1>Attendance Check</h1>
+      <p class="subtitle">Mark your daily attendance with location tracking</p>
+    </div>
+    
+    <div class="actions-area">
+      <button 
+        class="btn btn-secondary"
+        (click)="refreshAttendance()"
+        [disabled]="isLoading">
+        <i class="icon-refresh"></i>
+        Refresh
+      </button>
+    </div>
+  </div>
+
+  <!-- Alert Messages -->
+  <div class="alert alert-success" *ngIf="successMessage">
+    <i class="icon-check"></i>
+    {{ successMessage }}
+  </div>
+  
+  <div class="alert alert-error" *ngIf="errorMessage">
+    <i class="icon-error"></i>
+    {{ errorMessage }}
+  </div>
+
+  <!-- Current Status Card -->
+  <div class="status-card">
+    <div class="status-header">
+      <h3>Today's Attendance</h3>
+              <div class="status-date">{{ getCurrentDate() }}</div>
+    </div>
+    
+    <div class="status-content" *ngIf="todayAttendance; else noAttendanceToday">
+      <div class="status-info">
+        <div class="status-badge" [class]="getStatusClass(todayAttendance.attendance_status)">
+          {{ todayAttendance.attendance_status | titlecase }}
+        </div>
+        <div class="work-type">{{ getWorkTypeLabel(todayAttendance.work_type) }}</div>
+      </div>
+      
+      <div class="time-info">
+        <div class="time-item" *ngIf="todayAttendance.check_in_time">
+          <label>Check In</label>
+          <div class="time">{{ formatTime(todayAttendance.check_in_time) }}</div>
+        </div>
+        <div class="time-item" *ngIf="todayAttendance.check_out_time">
+          <label>Check Out</label>
+          <div class="time">{{ formatTime(todayAttendance.check_out_time) }}</div>
+        </div>
+        <div class="time-item">
+          <label>Duration</label>
+          <div class="time">{{ calculateWorkDuration() }}</div>
+        </div>
+      </div>
+
+      <div class="location-info" *ngIf="todayAttendance.location_name">
+        <label>Location</label>
+        <div class="location">{{ todayAttendance.location_name }}</div>
+      </div>
+
+      <div class="notes-info" *ngIf="todayAttendance.notes">
+        <label>Notes</label>
+        <div class="notes">{{ todayAttendance.notes }}</div>
+      </div>
+    </div>
+
+    <ng-template #noAttendanceToday>
+      <div class="no-attendance">
+        <div class="no-attendance-icon">
+          <i class="icon-calendar"></i>
+        </div>
+        <h4>No attendance marked today</h4>
+        <p>Start by checking in to track your work hours</p>
+      </div>
+    </ng-template>
+  </div>
+
+  <!-- Location Status -->
+  <div class="location-card">
+    <div class="location-header">
+      <h3>Current Location</h3>
+      <button 
+        class="btn btn-icon"
+        (click)="refreshLocation()"
+        [disabled]="isLocationLoading"
+        title="Refresh Location">
+        <i class="icon-location" [class.spinning]="isLocationLoading"></i>
+      </button>
+    </div>
+    
+    <div class="location-content" *ngIf="currentLocation; else noLocation">
+      <div class="coordinates">
+        <strong>Coordinates:</strong> 
+        {{ currentLocation.latitude.toFixed(6) }}, {{ currentLocation.longitude.toFixed(6) }}
+      </div>
+      <div class="address" *ngIf="currentLocation.address">
+        <strong>Address:</strong> {{ currentLocation.address }}
+      </div>
+    </div>
+
+    <ng-template #noLocation>
+      <div class="no-location">
+        <div class="no-location-icon">
+          <i class="icon-location-off"></i>
+        </div>
+        <p>Location not available</p>
+        <button class="btn btn-primary btn-sm" (click)="getCurrentLocation()">
+          Enable Location
+        </button>
+      </div>
+    </ng-template>
+  </div>
+
+  <!-- Check In/Out Actions -->
+  <div class="action-cards">
+    <!-- Check In Card -->
+    <div class="action-card" *ngIf="!isCheckedIn">
+      <div class="card-header">
+        <h3>Check In</h3>
+        <i class="icon-login card-icon"></i>
+      </div>
+      
+      <form [formGroup]="checkInForm" (ngSubmit)="checkIn()" class="action-form">
+        <div class="form-group">
+          <label for="organizational_unit_id">Organizational Unit</label>
+          <select 
+            id="organizational_unit_id"
+            class="form-select"
+            formControlName="organizational_unit_id">
+            <option value="">Select unit (optional)</option>
+            <option *ngFor="let unit of organizationalUnits" [value]="unit.id">
+              {{ unit.name }} ({{ unit.unit_type }})
+            </option>
+          </select>
+        </div>
+        
+        <div class="form-group">
+          <label for="work_type">Work Type *</label>
+          <select 
+            id="work_type"
+            class="form-select"
+            formControlName="work_type"
+            [class.error]="isFieldInvalid(checkInForm, 'work_type')">
+            <option *ngFor="let type of workTypes" [value]="type.value">
+              {{ type.label }}
+            </option>
+          </select>
+          <div class="error-message" *ngIf="isFieldInvalid(checkInForm, 'work_type')">
+            {{ getFieldError(checkInForm, 'work_type') }}
+          </div>
+        </div>
+        
+        <div class="form-group">
+          <label for="location_name">Location *</label>
+          <input 
+            type="text"
+            id="location_name"
+            class="form-input"
+            formControlName="location_name"
+            placeholder="Current location"
+            [class.error]="isFieldInvalid(checkInForm, 'location_name')">
+          <div class="error-message" *ngIf="isFieldInvalid(checkInForm, 'location_name')">
+            {{ getFieldError(checkInForm, 'location_name') }}
+          </div>
+        </div>
+        
+        <div class="form-group">
+          <label for="notes">Notes</label>
+          <textarea 
+            id="notes"
+            class="form-textarea"
+            formControlName="notes"
+            placeholder="Any additional notes"
+            rows="2"></textarea>
+        </div>
+        
+        <button 
+          type="submit"
+          class="btn btn-primary btn-full"
+          [disabled]="checkInForm.invalid || isLoading || !currentLocation">
+          <span *ngIf="isLoading" class="spinner-sm"></span>
+          <i class="icon-login" *ngIf="!isLoading"></i>
+          Check In
+        </button>
+      </form>
+    </div>
+
+    <!-- Check Out Card -->
+    <div class="action-card" *ngIf="isCheckedIn">
+      <div class="card-header">
+        <h3>Check Out</h3>
+        <i class="icon-logout card-icon"></i>
+      </div>
+      
+      <form [formGroup]="checkOutForm" (ngSubmit)="checkOut()" class="action-form">
+        <div class="form-group">
+          <label for="checkout_location">Location</label>
+          <input 
+            type="text"
+            id="checkout_location"
+            class="form-input"
+            formControlName="location_name"
+            [placeholder]="currentLocation ? 
+              (currentLocation.address || 'Current location') : 
+              'Enter location'">
+        </div>
+        
+        <div class="form-group">
+          <label for="checkout_notes">Notes</label>
+          <textarea 
+            id="checkout_notes"
+            class="form-textarea"
+            formControlName="notes"
+            placeholder="Any additional notes for checkout"
+            rows="2"></textarea>
+        </div>
+        
+        <button 
+          type="submit"
+          class="btn btn-warning btn-full"
+          [disabled]="isLoading">
+          <span *ngIf="isLoading" class="spinner-sm"></span>
+          <i class="icon-logout" *ngIf="!isLoading"></i>
+          Check Out
+        </button>
+      </form>
+    </div>
+
+    <!-- Already Checked Out -->
+    <div class="action-card completed" *ngIf="isCheckedOut">
+      <div class="card-header">
+        <h3>Work Complete</h3>
+        <i class="icon-check-circle card-icon"></i>
+      </div>
+      
+      <div class="completed-info">
+        <p>You have already checked out for today.</p>
+        <div class="work-summary">
+          <div class="summary-item">
+            <strong>Check In:</strong> {{ formatTime(todayAttendance!.check_in_time) }}
+          </div>
+          <div class="summary-item">
+            <strong>Check Out:</strong> {{ formatTime(todayAttendance!.check_out_time!) }}
+          </div>
+          <div class="summary-item">
+            <strong>Total Duration:</strong> {{ calculateWorkDuration() }}
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

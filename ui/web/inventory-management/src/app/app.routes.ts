@@ -16,14 +16,53 @@ export const routes: Routes = [
   { path: 'forgot-password', component: ForgotPasswordComponent },
   { path: 'reset-password', component: ResetPasswordComponent },
   { path: 'dashboard', component: DashboardComponent, canActivate: [authGuard] },
-  { path: 'change-password', component: ChangePasswordComponent },
+  { path: 'change-password', component: ChangePasswordComponent, canActivate: [authGuard] },
+  
+  // Admin Management Routes
   {
     path: 'admin/users',
-    loadComponent: () => import('./components/admin-management/admin-user-management.component').then(m => m.AdminUserManagementComponent)
+    loadComponent: () => import('./components/admin-management/admin-user-management.component').then(m => m.AdminUserManagementComponent),
+    canActivate: [authGuard]
   },
   {
     path: 'admin/roles',
-    loadComponent: () => import('./components/admin-management/admin-role-management.component').then(m => m.AdminRoleManagementComponent)
+    loadComponent: () => import('./components/admin-management/admin-role-management.component').then(m => m.AdminRoleManagementComponent),
+    canActivate: [authGuard]
   },
+  
+  // Organization Management Routes
+  {
+    path: 'organization/units',
+    loadComponent: () => import('./components/organization/organization-management.component').then(m => m.OrganizationManagementComponent),
+    canActivate: [authGuard]
+  },
+  {
+    path: 'organization/assignments',
+    loadComponent: () => import('./components/organization/user-assignment.component').then(m => m.UserAssignmentComponent),
+    canActivate: [authGuard]
+  },
+  {
+    path: 'organization/locations',
+    loadComponent: () => import('./components/organization/office-location.component').then(m => m.OfficeLocationComponent),
+    canActivate: [authGuard]
+  },
+  
+  // Attendance Management Routes
+  {
+    path: 'attendance/check',
+    loadComponent: () => import('./components/attendance/attendance-check.component').then(m => m.AttendanceCheckComponent),
+    canActivate: [authGuard]
+  },
+  {
+    path: 'attendance/rules',
+    loadComponent: () => import('./components/attendance/attendance-rules.component').then(m => m.AttendanceRulesComponent),
+    canActivate: [authGuard]
+  },
+  {
+    path: 'attendance/reports',
+    loadComponent: () => import('./components/attendance/attendance-reports.component').then(m => m.AttendanceReportsComponent),
+    canActivate: [authGuard]
+  },
+  
   { path: '**', redirectTo: '' }
 ];
