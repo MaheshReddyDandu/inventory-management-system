@@ -31,7 +31,7 @@ async def create_organizational_unit(
     unit = org_service.create_organizational_unit(unit_data)
     return unit
 
-@router.get("/units", response_model=List[OrganizationalUnitResponse])
+@router.get("/units")
 async def get_organizational_units(
     unit_type: Optional[str] = Query(None, description="Filter by unit type"),
     current_user: User = Depends(get_current_user),
@@ -41,9 +41,11 @@ async def get_organizational_units(
     org_service = OrganizationService(db)
     if unit_type:
         units = org_service.get_units_by_type(current_user.product_id, unit_type)
+        return units
     else:
-        units = org_service.get_hierarchy_tree(current_user.product_id)
-    return units
+        # Return hierarchy tree when no unit_type specified
+        tree = org_service.get_hierarchy_tree(current_user.product_id)
+        return tree
 
 @router.get("/units/hierarchy", response_model=List[HierarchyNode])
 async def get_hierarchy_tree(
