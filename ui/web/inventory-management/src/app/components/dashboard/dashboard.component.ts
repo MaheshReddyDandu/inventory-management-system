@@ -6,6 +6,7 @@ import { OrganizationService, OrganizationStats, Attendance } from '../../servic
 import { AttendanceStateService, AttendanceState } from '../../services/attendance-state.service';
 import { Router } from '@angular/router';
 import { Subscription } from 'rxjs';
+import { ModernIconComponent, IconType } from '../shared/modern-icon.component';
 
 interface DashboardStats {
   totalUsers: number;
@@ -20,7 +21,7 @@ interface DashboardStats {
 interface QuickAction {
   title: string;
   description: string;
-  icon: string;
+  icon: IconType;
   route: string;
   color: string;
   roles: string[];
@@ -29,7 +30,7 @@ interface QuickAction {
 @Component({
   selector: 'app-dashboard',
   standalone: true,
-  imports: [CommonModule, RouterModule],
+  imports: [CommonModule, RouterModule, ModernIconComponent],
   templateUrl: './dashboard.component.html',
   styleUrls: ['./dashboard.component.scss']
 })
@@ -59,15 +60,47 @@ export class DashboardComponent implements OnInit, OnDestroy {
     {
       title: 'Check Attendance',
       description: 'Mark your check-in/out for today',
-      icon: 'icon-calendar',
+      icon: 'attendance',
       route: '/attendance/check',
       color: 'blue',
       roles: ['user', 'manager', 'admin']
     },
     {
+      title: 'Branches Management',
+      description: 'Manage branches and sub-branches',
+      icon: 'branch',
+      route: '/organization/branches',
+      color: 'purple',
+      roles: ['manager', 'admin']
+    },
+    {
+      title: 'Clients Management',
+      description: 'Manage client organizations and relationships',
+      icon: 'client',
+      route: '/organization/clients',
+      color: 'green',
+      roles: ['manager', 'admin']
+    },
+    {
+      title: 'Departments Management',
+      description: 'Manage organizational departments and structure',
+      icon: 'department',
+      route: '/organization/departments',
+      color: 'blue',
+      roles: ['manager', 'admin']
+    },
+    {
+      title: 'Projects Management',
+      description: 'Manage organizational projects and structure',
+      icon: 'project',
+      route: '/organization/projects',
+      color: 'orange',
+      roles: ['manager', 'admin']
+    },
+    {
       title: 'Organization Units',
       description: 'Manage organizational structure',
-      icon: 'icon-organization',
+      icon: 'organization',
       route: '/organization/units',
       color: 'purple',
       roles: ['manager', 'admin']
@@ -75,7 +108,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
     {
       title: 'User Assignments',
       description: 'Assign users to units',
-      icon: 'icon-users',
+      icon: 'users',
       route: '/organization/assignments',
       color: 'green',
       roles: ['manager', 'admin']
@@ -83,7 +116,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
     {
       title: 'Office Locations',
       description: 'Manage office locations and geofencing',
-      icon: 'icon-location',
+      icon: 'location',
       route: '/organization/locations',
       color: 'red',
       roles: ['manager', 'admin']
@@ -91,7 +124,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
     {
       title: 'Attendance Rules',
       description: 'Configure attendance policies',
-      icon: 'icon-rules',
+      icon: 'rules',
       route: '/attendance/rules',
       color: 'orange',
       roles: ['admin']
@@ -99,7 +132,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
     {
       title: 'Attendance Reports',
       description: 'View attendance analytics',
-      icon: 'icon-chart',
+      icon: 'reports',
       route: '/attendance/reports',
       color: 'indigo',
       roles: ['manager', 'admin']
@@ -107,7 +140,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
     {
       title: 'User Management',
       description: 'Manage system users',
-      icon: 'icon-admin',
+      icon: 'admin',
       route: '/admin/users',
       color: 'gray',
       roles: ['admin']
@@ -115,7 +148,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
     {
       title: 'Role Management',
       description: 'Configure user roles and permissions',
-      icon: 'icon-shield',
+      icon: 'shield',
       route: '/admin/roles',
       color: 'gray',
       roles: ['admin']

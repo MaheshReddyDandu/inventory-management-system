@@ -22,6 +22,8 @@ export interface OrganizationalUnit {
   hierarchy_path: string;
   level: number;
   sort_order: number;
+  users_count?: number;
+  children_count?: number;
 }
 
 export interface HierarchyNode {
@@ -182,15 +184,21 @@ export class OrganizationService {
   }
 
   // Organizational Unit Methods
-  createOrganizationalUnit(unit: Partial<OrganizationalUnit>): Observable<OrganizationalUnit> {
-    return this.http.post<OrganizationalUnit>(`${this.API_URL}/units`, unit, { headers: this.getAuthHeaders() })
-      .pipe(catchError(this.handleError));
+  createOrganizationalUnit(unitData: any): Observable<OrganizationalUnit> {
+    return this.http.post<OrganizationalUnit>(`${this.API_URL}/units`, unitData, {
+      headers: this.getAuthHeaders()
+    }).pipe(
+      catchError(this.handleError)
+    );
   }
 
   getOrganizationalUnits(unitType?: string): Observable<OrganizationalUnit[]> {
-    const params = unitType ? `?unit_type=${unitType}` : '';
-    return this.http.get<OrganizationalUnit[]>(`${this.API_URL}/units${params}`, { headers: this.getAuthHeaders() })
-      .pipe(catchError(this.handleError));
+    const url = unitType ? `${this.API_URL}/units?unit_type=${unitType}` : `${this.API_URL}/units`;
+    return this.http.get<OrganizationalUnit[]>(url, {
+      headers: this.getAuthHeaders()
+    }).pipe(
+      catchError(this.handleError)
+    );
   }
 
   getOrganizationalUnit(id: number): Observable<OrganizationalUnit> {
@@ -198,14 +206,20 @@ export class OrganizationService {
       .pipe(catchError(this.handleError));
   }
 
-  updateOrganizationalUnit(id: number, unit: Partial<OrganizationalUnit>): Observable<OrganizationalUnit> {
-    return this.http.put<OrganizationalUnit>(`${this.API_URL}/units/${id}`, unit, { headers: this.getAuthHeaders() })
-      .pipe(catchError(this.handleError));
+  updateOrganizationalUnit(unitId: number, unitData: any): Observable<OrganizationalUnit> {
+    return this.http.put<OrganizationalUnit>(`${this.API_URL}/units/${unitId}`, unitData, {
+      headers: this.getAuthHeaders()
+    }).pipe(
+      catchError(this.handleError)
+    );
   }
 
-  deleteOrganizationalUnit(id: number): Observable<any> {
-    return this.http.delete(`${this.API_URL}/units/${id}`, { headers: this.getAuthHeaders() })
-      .pipe(catchError(this.handleError));
+  deleteOrganizationalUnit(unitId: number): Observable<any> {
+    return this.http.delete(`${this.API_URL}/units/${unitId}`, {
+      headers: this.getAuthHeaders()
+    }).pipe(
+      catchError(this.handleError)
+    );
   }
 
   getHierarchyTree(unitType?: string): Observable<HierarchyNode[]> {

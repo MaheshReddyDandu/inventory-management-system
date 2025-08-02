@@ -65,7 +65,12 @@
       </div>
       <div class="header-actions">
         <button class="refresh-btn" (click)="refreshAttendance()" [disabled]="attendanceState.isLoading">
-          <span class="refresh-icon" [class.spinning]="attendanceState.isLoading">🔄</span>
+          <app-modern-icon 
+            type="refresh" 
+            size="md" 
+            color="blue" 
+            [animation]="attendanceState.isLoading ? 'spin' : 'none'">
+          </app-modern-icon>
         </button>
       </div>
     </div>
@@ -75,7 +80,12 @@
       <!-- Current Status Card -->
       <div class="status-card" [class]="attendanceState.isCheckedIn ? 'checked-in' : 'checked-out'">
         <div class="card-icon">
-          <span class="status-emoji">{{ attendanceState.isCheckedIn ? '✅' : '❌' }}</span>
+          <app-modern-icon 
+            [type]="attendanceState.isCheckedIn ? 'check' : 'warning'" 
+            size="xl" 
+            [color]="attendanceState.isCheckedIn ? 'success' : 'danger'"
+            [animation]="attendanceState.isCheckedIn ? 'pulse' : 'none'">
+          </app-modern-icon>
         </div>
         <div class="card-content">
           <h3>Current Status</h3>
@@ -90,7 +100,7 @@
       <!-- Today's Hours Card -->
       <div class="hours-card">
         <div class="card-icon">
-          <span class="time-emoji">⏰</span>
+          <app-modern-icon type="clock" size="xl" color="orange" animation="pulse"></app-modern-icon>
         </div>
         <div class="card-content">
           <h3>Today's Hours</h3>
@@ -197,7 +207,7 @@
       <div class="stat-card">
         <div class="stat-header">
           <h3>Total Users</h3>
-          <i class="icon-users stat-icon"></i>
+          <app-modern-icon type="users" size="lg" color="purple" class="stat-icon"></app-modern-icon>
         </div>
         <div class="stat-value">{{ stats.totalUsers }}</div>
         <div class="stat-description">Active system users</div>
@@ -206,7 +216,7 @@
       <div class="stat-card">
         <div class="stat-header">
           <h3>Organizational Units</h3>
-          <i class="icon-organization stat-icon"></i>
+          <app-modern-icon type="organization" size="lg" color="indigo" class="stat-icon"></app-modern-icon>
         </div>
         <div class="stat-value">{{ stats.totalUnits }}</div>
         <div class="stat-description">Branches, departments & projects</div>
@@ -215,7 +225,7 @@
       <div class="stat-card">
         <div class="stat-header">
           <h3>Today's Attendance</h3>
-          <i class="icon-calendar stat-icon"></i>
+          <app-modern-icon type="attendance" size="lg" color="green" class="stat-icon"></app-modern-icon>
         </div>
         <div class="stat-value">{{ stats.todayAttendance }}</div>
         <div class="stat-description">Users checked in today</div>
@@ -224,7 +234,7 @@
       <div class="stat-card">
         <div class="stat-header">
           <h3>Currently At Work</h3>
-          <i class="icon-clock stat-icon"></i>
+          <app-modern-icon type="clock" size="lg" color="orange" class="stat-icon"></app-modern-icon>
         </div>
         <div class="stat-value">{{ stats.checkedInUsers }}</div>
         <div class="stat-description">Users currently checked in</div>
@@ -233,7 +243,7 @@
       <div class="stat-card">
         <div class="stat-header">
           <h3>Late Arrivals</h3>
-          <i class="icon-warning stat-icon"></i>
+          <app-modern-icon type="warning" size="lg" color="warning" class="stat-icon"></app-modern-icon>
         </div>
         <div class="stat-value">{{ stats.lateUsers }}</div>
         <div class="stat-description">Late check-ins today</div>
@@ -242,7 +252,7 @@
       <div class="stat-card">
         <div class="stat-header">
           <h3>Remote Workers</h3>
-          <i class="icon-home stat-icon"></i>
+          <app-modern-icon type="home" size="lg" color="blue" class="stat-icon"></app-modern-icon>
         </div>
         <div class="stat-value">{{ stats.remoteUsers }}</div>
         <div class="stat-description">Working remotely today</div>
@@ -260,14 +270,19 @@
            (click)="navigateToAction(action.route)"
            [class]="'action-' + action.color">
         <div class="action-icon">
-          <i [class]="action.icon"></i>
+          <app-modern-icon 
+            [type]="action.icon" 
+            size="xl" 
+            [animation]="'animated'"
+            [tooltip]="action.title">
+          </app-modern-icon>
         </div>
         <div class="action-content">
           <h3>{{ action.title }}</h3>
           <p>{{ action.description }}</p>
         </div>
         <div class="action-arrow">
-          <i class="icon-arrow-right"></i>
+          <app-modern-icon type="arrow-right" size="sm" color="gray"></app-modern-icon>
         </div>
       </div>
     </div>

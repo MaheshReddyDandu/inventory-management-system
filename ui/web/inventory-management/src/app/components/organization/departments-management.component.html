@@ -1,0 +1,709 @@
+<div class="departments-management">
+  <!-- Header Section -->
+  <div class="header-section">
+    <div class="title-area">
+      <h1>
+        <app-modern-icon type="department" size="xl" color="blue"></app-modern-icon>
+        Department Management
+      </h1>
+      <p class="subtitle">Manage organizational departments, hierarchy, and structure</p>
+    </div>
+    
+    <div class="actions-area" *ngIf="isManagerOrAdmin">
+      <button 
+        class="btn btn-secondary"
+        (click)="toggleBulkMode()"
+        [class.active]="bulkMode"
+        [disabled]="isLoading">
+        <app-modern-icon type="bulk" size="sm" color="orange"></app-modern-icon>
+        {{ bulkMode ? 'Exit Bulk Mode' : 'Bulk Actions' }}
+      </button>
+      
+      <button 
+        class="btn btn-primary"
+        (click)="openCreateModal()"
+        [disabled]="isLoading">
+        <app-modern-icon type="plus" size="sm" color="white"></app-modern-icon>
+        Add Department
+      </button>
+    </div>
+  </div>
+
+  <!-- Stats Cards -->
+  <div class="stats-section">
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-icon">
+          <app-modern-icon type="department" size="lg" color="blue"></app-modern-icon>
+        </div>
+        <div class="stat-content">
+          <div class="stat-value">{{ stats.totalDepartments }}</div>
+          <div class="stat-label">Total Departments</div>
+        </div>
+      </div>
+      
+      <div class="stat-card">
+        <div class="stat-icon active">
+          <app-modern-icon type="check" size="lg" color="success"></app-modern-icon>
+        </div>
+        <div class="stat-content">
+          <div class="stat-value">{{ stats.activeDepartments }}</div>
+          <div class="stat-label">Active Departments</div>
+        </div>
+      </div>
+      
+      <div class="stat-card">
+        <div class="stat-icon sub">
+          <app-modern-icon type="hierarchy" size="lg" color="indigo"></app-modern-icon>
+        </div>
+        <div class="stat-content">
+          <div class="stat-value">{{ stats.subDepartments }}</div>
+          <div class="stat-label">Sub Departments</div>
+        </div>
+      </div>
+      
+      <div class="stat-card">
+        <div class="stat-icon users">
+          <app-modern-icon type="users" size="lg" color="purple"></app-modern-icon>
+        </div>
+        <div class="stat-content">
+          <div class="stat-value">{{ stats.assignedUsers }}</div>
+          <div class="stat-label">Assigned Users</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Filters Section -->
+  <div class="filters-section">
+    <div class="filter-grid">
+      <div class="filter-item">
+        <label for="status">Status</label>
+        <select 
+          id="status"
+          class="form-select"
+          [(ngModel)]="selectedStatus"
+          (change)="onStatusChange()">
+          <option *ngFor="let option of statusOptions" [value]="option.value">
+            {{ option.label }}
+          </option>
+        </select>
+      </div>
+      
+      <div class="filter-item">
+        <label for="parent">Parent Type</label>
+        <select 
+          id="parent"
+          class="form-select"
+          [(ngModel)]="selectedParent"
+          (change)="onFilterChange()">
+          <option *ngFor="let option of parentOptions" [value]="option.value">
+            {{ option.label }}
+          </option>
+        </select>
+      </div>
+      
+      <div class="filter-item">
+        <label for="search">Search</label>
+        <div class="search-input">
+          <input 
+            type="text"
+            id="search"
+            class="form-input"
+            placeholder="Search departments by name, code, or contact..."
+            (input)="onSearchChange($event)">
+          <i class="icon-search"></i>
+        </div>
+      </div>
+      
+      <div class="filter-item">
+        <button 
+          class="btn btn-outline"
+          (click)="clearAllFilters()"
+          [disabled]="!searchTerm && !selectedStatus && !selectedParent">
+          <i class="icon-clear"></i>
+          Clear Filters
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bulk Actions Bar -->
+  <div class="bulk-actions-bar" *ngIf="bulkMode">
+    <div class="bulk-info">
+      <span class="selected-count">{{ selectedDepartments.size }} department(s) selected</span>
+    </div>
+    
+    <div class="bulk-actions">
+      <button 
+        class="btn btn-outline"
+        (click)="selectAllDepartments()">
+        Select All
+      </button>
+      <button 
+        class="btn btn-outline"
+        (click)="deselectAllDepartments()">
+        Deselect All
+      </button>
+      <button 
+        class="btn btn-danger"
+        (click)="bulkDeleteDepartments()"
+        [disabled]="selectedDepartments.size === 0 || isSubmitting">
+        <i class="icon-delete"></i>
+        Delete Selected
+      </button>
+    </div>
+  </div>
+
+  <!-- Loading State -->
+  <div class="loading-state" *ngIf="isLoading">
+    <div class="spinner"></div>
+    <p>Loading departments...</p>
+  </div>
+
+  <!-- Departments Tree View -->
+  <div class="departments-container" *ngIf="!isLoading">
+    <div class="departments-tree">
+      <ng-container *ngFor="let department of filteredDepartments; trackBy: trackByDepartment">
+        <div class="department-node" [class.selected]="selectedDepartments.has(department.id)">
+          <div class="department-content" 
+               [style.margin-left.px]="getDepartmentLevel(department) * 20">
+            
+            <!-- Checkbox for bulk mode -->
+            <div class="department-checkbox" *ngIf="bulkMode">
+              <input 
+                type="checkbox"
+                [checked]="selectedDepartments.has(department.id)"
+                (change)="toggleDepartmentSelection(department)">
+            </div>
+            
+            <!-- Expand/Collapse Button -->
+            <button 
+              class="expand-btn"
+              *ngIf="department.children && department.children.length > 0"
+              (click)="toggleDepartmentExpansion(department)">
+              <i class="icon-chevron" 
+                 [class.expanded]="department.expanded"></i>
+            </button>
+            <div class="expand-spacer" *ngIf="!department.children || department.children.length === 0"></div>
+
+            <!-- Department Icon -->
+            <div class="department-icon">
+              <i class="icon-department"></i>
+            </div>
+
+            <!-- Department Info -->
+            <div class="department-info">
+              <div class="department-name">{{ department.name }}</div>
+              <div class="department-meta">
+                <span class="department-code">{{ department.code }}</span>
+                <span class="department-users" *ngIf="department.users_count">
+                  {{ department.users_count }} users
+                </span>
+                <span class="department-description" *ngIf="department.description">
+                  {{ department.description }}
+                </span>
+              </div>
+              <div class="department-contact" *ngIf="department.contact_person || department.contact_email">
+                <span *ngIf="department.contact_person">{{ department.contact_person }}</span>
+                <span *ngIf="department.contact_email"> • {{ department.contact_email }}</span>
+              </div>
+            </div>
+
+            <!-- Department Status -->
+            <div class="department-status">
+              <span class="status-badge" [class]="getDepartmentStatusClass(department)">
+                {{ getDepartmentStatusText(department) }}
+              </span>
+            </div>
+
+            <!-- Department Actions -->
+            <div class="department-actions" *ngIf="isManagerOrAdmin && !bulkMode">
+              <button 
+                class="btn btn-icon btn-edit"
+                (click)="openEditModal(department)"
+                title="Edit Department">
+                <i class="icon-edit"></i>
+              </button>
+              <button 
+                class="btn btn-icon btn-delete"
+                (click)="openDeleteModal(department)"
+                title="Delete Department"
+                *ngIf="isAdmin">
+                <i class="icon-delete"></i>
+              </button>
+            </div>
+          </div>
+
+          <!-- Child Departments -->
+          <div class="child-departments" *ngIf="department.expanded && department.children && department.children.length > 0">
+            <ng-container *ngFor="let child of department.children; trackBy: trackByDepartment">
+              <div class="department-node" [class.selected]="selectedDepartments.has(child.id)">
+                <div class="department-content" 
+                     [style.margin-left.px]="(getDepartmentLevel(child) + 1) * 20">
+                  
+                  <!-- Checkbox for bulk mode -->
+                  <div class="department-checkbox" *ngIf="bulkMode">
+                    <input 
+                      type="checkbox"
+                      [checked]="selectedDepartments.has(child.id)"
+                      (change)="toggleDepartmentSelection(child)">
+                  </div>
+                  
+                  <!-- Expand/Collapse Button -->
+                  <button 
+                    class="expand-btn"
+                    *ngIf="child.children && child.children.length > 0"
+                    (click)="toggleDepartmentExpansion(child)">
+                    <i class="icon-chevron" 
+                       [class.expanded]="child.expanded"></i>
+                  </button>
+                  <div class="expand-spacer" *ngIf="!child.children || child.children.length === 0"></div>
+
+                  <!-- Department Icon -->
+                  <div class="department-icon sub">
+                    <i class="icon-department"></i>
+                  </div>
+
+                  <!-- Department Info -->
+                  <div class="department-info">
+                    <div class="department-name">{{ child.name }}</div>
+                    <div class="department-meta">
+                      <span class="department-code">{{ child.code }}</span>
+                      <span class="department-users" *ngIf="child.users_count">
+                        {{ child.users_count }} users
+                      </span>
+                      <span class="department-description" *ngIf="child.description">
+                        {{ child.description }}
+                      </span>
+                    </div>
+                    <div class="department-contact" *ngIf="child.contact_person || child.contact_email">
+                      <span *ngIf="child.contact_person">{{ child.contact_person }}</span>
+                      <span *ngIf="child.contact_email"> • {{ child.contact_email }}</span>
+                    </div>
+                  </div>
+
+                  <!-- Department Status -->
+                  <div class="department-status">
+                    <span class="status-badge" [class]="getDepartmentStatusClass(child)">
+                      {{ getDepartmentStatusText(child) }}
+                    </span>
+                  </div>
+
+                  <!-- Department Actions -->
+                  <div class="department-actions" *ngIf="isManagerOrAdmin && !bulkMode">
+                    <button 
+                      class="btn btn-icon btn-edit"
+                      (click)="openEditModal(child)"
+                      title="Edit Department">
+                      <i class="icon-edit"></i>
+                    </button>
+                    <button 
+                      class="btn btn-icon btn-delete"
+                      (click)="openDeleteModal(child)"
+                      title="Delete Department"
+                      *ngIf="isAdmin">
+                      <i class="icon-delete"></i>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </ng-container>
+          </div>
+        </div>
+      </ng-container>
+      
+      <!-- Empty State -->
+      <div class="empty-state" *ngIf="filteredDepartments.length === 0">
+        <div class="empty-icon">
+          <i class="icon-departments"></i>
+        </div>
+        <h3>No departments found</h3>
+        <p *ngIf="searchTerm || selectedStatus || selectedParent">
+          Try adjusting your filters or search terms.
+        </p>
+        <p *ngIf="!searchTerm && !selectedStatus && !selectedParent">
+          Create your first department to get started.
+        </p>
+        <button 
+          class="btn btn-primary"
+          (click)="openCreateModal()"
+          *ngIf="isManagerOrAdmin && !searchTerm && !selectedStatus && !selectedParent">
+          Create First Department
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Create Department Modal -->
+<div class="modal-overlay" *ngIf="showCreateModal" (click)="closeModal()">
+  <div class="modal-container" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <h2>Create New Department</h2>
+      <button class="btn btn-icon btn-close" (click)="closeModal()">
+        <i class="icon-close"></i>
+      </button>
+    </div>
+    
+    <form [formGroup]="departmentForm" (ngSubmit)="onSubmit()" class="modal-form">
+      <div class="modal-body">
+        <div class="form-grid">
+          <!-- Basic Information -->
+          <div class="form-section">
+            <h3>Basic Information</h3>
+            
+            <div class="form-group">
+              <label for="name">Department Name *</label>
+              <input 
+                type="text"
+                id="name"
+                class="form-input"
+                formControlName="name"
+                placeholder="Enter department name"
+                [class.error]="isFieldInvalid('name')">
+              <div class="error-message" *ngIf="isFieldInvalid('name')">
+                {{ getFieldError('name') }}
+              </div>
+            </div>
+            
+            <div class="form-group">
+              <label for="code">Department Code *</label>
+              <input 
+                type="text"
+                id="code"
+                class="form-input"
+                formControlName="code"
+                placeholder="DEPT001"
+                [class.error]="isFieldInvalid('code')">
+              <div class="error-message" *ngIf="isFieldInvalid('code')">
+                {{ getFieldError('code') }}
+              </div>
+              <small class="form-hint">Format: DEPT001, DEPT002, etc.</small>
+            </div>
+            
+            <div class="form-group">
+              <label for="parent_id">Parent Department</label>
+              <select 
+                id="parent_id"
+                class="form-select"
+                formControlName="parent_id">
+                <option value="">No parent (root level)</option>
+                <option *ngFor="let department of getParentDepartments()" [value]="department.id">
+                  {{ department.name }} ({{ department.code }})
+                </option>
+              </select>
+            </div>
+            
+            <div class="form-group">
+              <label for="description">Description</label>
+              <textarea 
+                id="description"
+                class="form-textarea"
+                formControlName="description"
+                placeholder="Brief description of the department"
+                rows="3"></textarea>
+            </div>
+            
+            <div class="form-group">
+              <label for="sort_order">Sort Order</label>
+              <input 
+                type="number"
+                id="sort_order"
+                class="form-input"
+                formControlName="sort_order"
+                min="0"
+                placeholder="0">
+            </div>
+          </div>
+          
+          <!-- Contact Information -->
+          <div class="form-section">
+            <h3>Contact Information</h3>
+            
+            <div class="form-group">
+              <label for="contact_person">Contact Person</label>
+              <input 
+                type="text"
+                id="contact_person"
+                class="form-input"
+                formControlName="contact_person"
+                placeholder="Name of contact person">
+            </div>
+            
+            <div class="form-group">
+              <label for="contact_email">Contact Email</label>
+              <input 
+                type="email"
+                id="contact_email"
+                class="form-input"
+                formControlName="contact_email"
+                placeholder="contact@department.com"
+                [class.error]="isFieldInvalid('contact_email')">
+              <div class="error-message" *ngIf="isFieldInvalid('contact_email')">
+                {{ getFieldError('contact_email') }}
+              </div>
+            </div>
+            
+            <div class="form-group">
+              <label for="contact_phone">Contact Phone</label>
+              <input 
+                type="tel"
+                id="contact_phone"
+                class="form-input"
+                formControlName="contact_phone"
+                placeholder="+1 (555) 123-4567"
+                [class.error]="isFieldInvalid('contact_phone')">
+              <div class="error-message" *ngIf="isFieldInvalid('contact_phone')">
+                {{ getFieldError('contact_phone') }}
+              </div>
+            </div>
+            
+            <div class="form-group">
+              <label for="address">Address</label>
+              <textarea 
+                id="address"
+                class="form-textarea"
+                formControlName="address"
+                placeholder="Physical address of the department"
+                rows="3"></textarea>
+            </div>
+            
+            <div class="form-group">
+              <label for="is_active">Status</label>
+              <div class="checkbox-group">
+                <input 
+                  type="checkbox"
+                  id="is_active"
+                  formControlName="is_active">
+                <label for="is_active">Active</label>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <div class="modal-footer">
+        <button 
+          type="button"
+          class="btn btn-secondary"
+          (click)="closeModal()">
+          Cancel
+        </button>
+        <button 
+          type="submit"
+          class="btn btn-primary"
+          [disabled]="departmentForm.invalid || isSubmitting">
+          <span *ngIf="isSubmitting" class="spinner-sm"></span>
+          Create Department
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Edit Department Modal -->
+<div class="modal-overlay" *ngIf="showEditModal" (click)="closeModal()">
+  <div class="modal-container" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <h2>Edit Department</h2>
+      <button class="btn btn-icon btn-close" (click)="closeModal()">
+        <i class="icon-close"></i>
+      </button>
+    </div>
+    
+    <form [formGroup]="departmentForm" (ngSubmit)="onSubmit()" class="modal-form">
+      <div class="modal-body">
+        <div class="form-grid">
+          <!-- Basic Information -->
+          <div class="form-section">
+            <h3>Basic Information</h3>
+            
+            <div class="form-group">
+              <label for="edit_name">Department Name *</label>
+              <input 
+                type="text"
+                id="edit_name"
+                class="form-input"
+                formControlName="name"
+                placeholder="Enter department name"
+                [class.error]="isFieldInvalid('name')">
+              <div class="error-message" *ngIf="isFieldInvalid('name')">
+                {{ getFieldError('name') }}
+              </div>
+            </div>
+            
+            <div class="form-group">
+              <label for="edit_code">Department Code *</label>
+              <input 
+                type="text"
+                id="edit_code"
+                class="form-input"
+                formControlName="code"
+                placeholder="DEPT001"
+                [class.error]="isFieldInvalid('code')">
+              <div class="error-message" *ngIf="isFieldInvalid('code')">
+                {{ getFieldError('code') }}
+              </div>
+              <small class="form-hint">Format: DEPT001, DEPT002, etc.</small>
+            </div>
+            
+            <div class="form-group">
+              <label for="edit_parent_id">Parent Department</label>
+              <select 
+                id="edit_parent_id"
+                class="form-select"
+                formControlName="parent_id">
+                <option value="">No parent (root level)</option>
+                <option *ngFor="let department of getParentDepartments()" [value]="department.id">
+                  {{ department.name }} ({{ department.code }})
+                </option>
+              </select>
+            </div>
+            
+            <div class="form-group">
+              <label for="edit_description">Description</label>
+              <textarea 
+                id="edit_description"
+                class="form-textarea"
+                formControlName="description"
+                placeholder="Brief description of the department"
+                rows="3"></textarea>
+            </div>
+            
+            <div class="form-group">
+              <label for="edit_sort_order">Sort Order</label>
+              <input 
+                type="number"
+                id="edit_sort_order"
+                class="form-input"
+                formControlName="sort_order"
+                min="0"
+                placeholder="0">
+            </div>
+          </div>
+          
+          <!-- Contact Information -->
+          <div class="form-section">
+            <h3>Contact Information</h3>
+            
+            <div class="form-group">
+              <label for="edit_contact_person">Contact Person</label>
+              <input 
+                type="text"
+                id="edit_contact_person"
+                class="form-input"
+                formControlName="contact_person"
+                placeholder="Name of contact person">
+            </div>
+            
+            <div class="form-group">
+              <label for="edit_contact_email">Contact Email</label>
+              <input 
+                type="email"
+                id="edit_contact_email"
+                class="form-input"
+                formControlName="contact_email"
+                placeholder="contact@department.com"
+                [class.error]="isFieldInvalid('contact_email')">
+              <div class="error-message" *ngIf="isFieldInvalid('contact_email')">
+                {{ getFieldError('contact_email') }}
+              </div>
+            </div>
+            
+            <div class="form-group">
+              <label for="edit_contact_phone">Contact Phone</label>
+              <input 
+                type="tel"
+                id="edit_contact_phone"
+                class="form-input"
+                formControlName="contact_phone"
+                placeholder="+1 (555) 123-4567"
+                [class.error]="isFieldInvalid('contact_phone')">
+              <div class="error-message" *ngIf="isFieldInvalid('contact_phone')">
+                {{ getFieldError('contact_phone') }}
+              </div>
+            </div>
+            
+            <div class="form-group">
+              <label for="edit_address">Address</label>
+              <textarea 
+                id="edit_address"
+                class="form-textarea"
+                formControlName="address"
+                placeholder="Physical address of the department"
+                rows="3"></textarea>
+            </div>
+            
+            <div class="form-group">
+              <label for="edit_is_active">Status</label>
+              <div class="checkbox-group">
+                <input 
+                  type="checkbox"
+                  id="edit_is_active"
+                  formControlName="is_active">
+                <label for="edit_is_active">Active</label>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <div class="modal-footer">
+        <button 
+          type="button"
+          class="btn btn-secondary"
+          (click)="closeModal()">
+          Cancel
+        </button>
+        <button 
+          type="submit"
+          class="btn btn-primary"
+          [disabled]="departmentForm.invalid || isSubmitting">
+          <span *ngIf="isSubmitting" class="spinner-sm"></span>
+          Update Department
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div class="modal-overlay" *ngIf="showDeleteModal" (click)="closeModal()">
+  <div class="modal-container delete-modal" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <h2>Delete Department</h2>
+      <button class="btn btn-icon btn-close" (click)="closeModal()">
+        <i class="icon-close"></i>
+      </button>
+    </div>
+    
+    <div class="modal-body">
+      <div class="delete-warning">
+        <div class="warning-icon">
+          <i class="icon-warning"></i>
+        </div>
+        <h3>Are you sure you want to delete this department?</h3>
+        <p>This action will permanently delete <strong>{{ selectedDepartment?.name }}</strong> and all associated data.</p>
+        <p class="warning-text">This action cannot be undone.</p>
+      </div>
+    </div>
+    
+    <div class="modal-footer">
+      <button 
+        type="button"
+        class="btn btn-secondary"
+        (click)="closeModal()">
+        Cancel
+      </button>
+      <button 
+        type="button"
+        class="btn btn-danger"
+        (click)="deleteDepartment()"
+        [disabled]="isSubmitting">
+        <span *ngIf="isSubmitting" class="spinner-sm"></span>
+        Delete Department
+      </button>
+    </div>
+  </div>
+</div> 

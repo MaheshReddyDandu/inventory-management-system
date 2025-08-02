@@ -258,7 +258,13 @@ export class AuthService {
   }
 
   isAdmin(): boolean {
-    return this.hasRole('admin');
+    const user = this.getCurrentUserValue();
+    return user?.role?.name === 'admin';
+  }
+
+  isManagerOrAdmin(): boolean {
+    const user = this.getCurrentUserValue();
+    return user?.role?.name === 'admin' || user?.role?.name === 'manager';
   }
 
   isManager(): boolean {

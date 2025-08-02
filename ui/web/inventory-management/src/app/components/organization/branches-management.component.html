@@ -1,0 +1,541 @@
+<div class="branches-management-container">
+  <!-- Page Header -->
+  <div class="page-header">
+    <div class="header-content">
+      <div class="header-main">
+        <h1 class="page-title">
+          <app-modern-icon type="branch" size="xl" color="purple"></app-modern-icon>
+          Branches Management
+        </h1>
+        <p class="page-subtitle">Manage your organizational branches and sub-branches</p>
+      </div>
+      <div class="header-actions">
+        <button class="btn btn-secondary" (click)="toggleBulkMode()" [class.active]="bulkMode">
+          <app-modern-icon type="bulk" size="sm" color="orange"></app-modern-icon>
+          {{ bulkMode ? 'Exit Bulk Mode' : 'Bulk Operations' }}
+        </button>
+        <button class="btn btn-primary" (click)="openCreateModal()" *ngIf="isManagerOrAdmin">
+          <app-modern-icon type="plus" size="sm" color="white"></app-modern-icon>
+          Add Branch
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Stats Cards -->
+  <div class="stats-section">
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-icon">
+          <app-modern-icon type="branch" size="lg" color="purple"></app-modern-icon>
+        </div>
+        <div class="stat-content">
+          <div class="stat-value">{{ stats.totalBranches }}</div>
+          <div class="stat-label">Total Branches</div>
+        </div>
+      </div>
+      
+      <div class="stat-card">
+        <div class="stat-icon active">
+          <app-modern-icon type="check" size="lg" color="success"></app-modern-icon>
+        </div>
+        <div class="stat-content">
+          <div class="stat-value">{{ stats.activeBranches }}</div>
+          <div class="stat-label">Active Branches</div>
+        </div>
+      </div>
+      
+      <div class="stat-card">
+        <div class="stat-icon sub">
+          <app-modern-icon type="hierarchy" size="lg" color="indigo"></app-modern-icon>
+        </div>
+        <div class="stat-content">
+          <div class="stat-value">{{ stats.subBranches }}</div>
+          <div class="stat-label">Sub Branches</div>
+        </div>
+      </div>
+      
+      <div class="stat-card">
+        <div class="stat-icon users">
+          <app-modern-icon type="users" size="lg" color="blue"></app-modern-icon>
+        </div>
+        <div class="stat-content">
+          <div class="stat-value">{{ stats.assignedUsers }}</div>
+          <div class="stat-label">Assigned Users</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bulk Operations Bar -->
+  <div class="bulk-operations-bar" *ngIf="bulkMode">
+    <div class="bulk-content">
+      <div class="bulk-info">
+        <span class="selected-count">{{ selectedBranches.size }} branch(es) selected</span>
+      </div>
+      <div class="bulk-actions">
+        <button class="btn btn-sm btn-secondary" (click)="selectAllBranches()">
+          <i class="icon-select-all"></i>
+          Select All
+        </button>
+        <button class="btn btn-sm btn-secondary" (click)="deselectAllBranches()">
+          <i class="icon-deselect"></i>
+          Deselect All
+        </button>
+        <button class="btn btn-sm btn-danger" (click)="bulkDeleteBranches()" [disabled]="selectedBranches.size === 0">
+          <i class="icon-delete"></i>
+          Delete Selected
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Filters Section -->
+  <div class="filters-section">
+    <div class="filters-grid">
+      <div class="filter-group">
+        <label class="filter-label">Search</label>
+        <div class="search-input-wrapper">
+          <i class="icon-search"></i>
+          <input 
+            type="text" 
+            class="search-input" 
+            placeholder="Search branches..."
+            (input)="onSearchChange($event)">
+        </div>
+      </div>
+      
+      <div class="filter-group">
+        <label class="filter-label">Status</label>
+        <select class="filter-select" [(ngModel)]="selectedStatus" (change)="onStatusChange()">
+          <option *ngFor="let option of statusOptions" [value]="option.value">
+            {{ option.label }}
+          </option>
+        </select>
+      </div>
+      
+      <div class="filter-group">
+        <label class="filter-label">Type</label>
+        <select class="filter-select" [(ngModel)]="selectedParent" (change)="onFilterChange()">
+          <option *ngFor="let option of parentOptions" [value]="option.value">
+            {{ option.label }}
+          </option>
+        </select>
+      </div>
+      
+      <div class="filter-group">
+        <label class="filter-label">&nbsp;</label>
+        <button class="btn btn-outline" (click)="clearAllFilters()">
+          <i class="icon-clear"></i>
+          Clear Filters
+        </button>
+      </div>
+    </div>
+    
+    <!-- Active Filters Summary -->
+    <div class="filters-summary" *ngIf="searchTerm || selectedStatus || selectedParent">
+      <span class="summary-label">Active Filters:</span>
+      <span class="filter-tag" *ngIf="searchTerm">
+        Search: "{{ searchTerm }}"
+        <button (click)="searchTerm = ''; onSearchChange({ target: { value: '' } })">×</button>
+      </span>
+      <span class="filter-tag" *ngIf="selectedStatus">
+        Status: {{ getStatusLabel(selectedStatus) }}
+        <button (click)="selectedStatus = ''; onStatusChange()">×</button>
+      </span>
+      <span class="filter-tag" *ngIf="selectedParent">
+        Type: {{ getParentLabel(selectedParent) }}
+        <button (click)="selectedParent = ''; onFilterChange()">×</button>
+      </span>
+    </div>
+  </div>
+
+  <!-- Loading State -->
+  <div class="loading-state" *ngIf="isLoading">
+    <div class="loading-content">
+      <div class="spinner"></div>
+      <p>Loading branches...</p>
+    </div>
+  </div>
+
+  <!-- Content Section -->
+  <div class="content-section" *ngIf="!isLoading">
+    <div class="results-summary">
+      <span class="results-count">{{ filteredBranches.length }} branch(es) found</span>
+    </div>
+
+    <!-- Branches Tree View -->
+    <div class="branches-tree" *ngIf="filteredBranches.length > 0">
+      <div class="tree-container">
+        <div class="branch-node" 
+             *ngFor="let branch of filteredBranches; trackBy: trackByBranch"
+             [class.expanded]="branch.expanded"
+             [class.selected]="selectedBranches.has(branch.id)">
+          
+          <!-- Branch Row -->
+          <div class="branch-row" [style.padding-left.px]="getBranchLevel(branch) * 20">
+            <!-- Selection Checkbox -->
+            <div class="branch-checkbox" *ngIf="bulkMode">
+              <input 
+                type="checkbox" 
+                [checked]="selectedBranches.has(branch.id)"
+                (change)="toggleBranchSelection(branch)">
+            </div>
+            
+            <!-- Expand/Collapse Button -->
+            <div class="branch-expand" *ngIf="branch.children && branch.children.length > 0">
+              <button class="expand-btn" (click)="toggleBranchExpansion(branch)">
+                <i class="icon-chevron" [class.expanded]="branch.expanded"></i>
+              </button>
+            </div>
+            
+            <!-- Branch Icon -->
+            <div class="branch-icon">
+              <i class="icon-branch" [class.sub-branch]="branch.parent_id"></i>
+            </div>
+            
+            <!-- Branch Info -->
+            <div class="branch-info">
+              <div class="branch-main">
+                <h3 class="branch-name">{{ branch.name }}</h3>
+                <span class="branch-code">{{ branch.code }}</span>
+                <span class="branch-status" [class]="getBranchStatusClass(branch)">
+                  {{ getBranchStatusText(branch) }}
+                </span>
+              </div>
+              
+              <div class="branch-details" *ngIf="branch.description || branch.contact_person">
+                <p class="branch-description" *ngIf="branch.description">{{ branch.description }}</p>
+                <div class="branch-contact" *ngIf="branch.contact_person">
+                  <span class="contact-person">{{ branch.contact_person }}</span>
+                  <span class="contact-email" *ngIf="branch.contact_email">{{ branch.contact_email }}</span>
+                </div>
+              </div>
+              
+              <div class="branch-meta">
+                <span class="meta-item">
+                  <i class="icon-users"></i>
+                  {{ branch.users_count || 0 }} users
+                </span>
+                <span class="meta-item" *ngIf="branch.children && branch.children.length > 0">
+                  <i class="icon-hierarchy"></i>
+                  {{ branch.children.length }} sub-branch(es)
+                </span>
+                <span class="meta-item">
+                  <i class="icon-calendar"></i>
+                  {{ formatDate(branch.created_at) }}
+                </span>
+              </div>
+            </div>
+            
+            <!-- Branch Actions -->
+            <div class="branch-actions" *ngIf="isManagerOrAdmin">
+              <button class="action-btn edit" (click)="openEditModal(branch)" title="Edit Branch">
+                <i class="icon-edit"></i>
+              </button>
+              <button class="action-btn delete" (click)="openDeleteModal(branch)" title="Delete Branch">
+                <i class="icon-delete"></i>
+              </button>
+            </div>
+          </div>
+          
+          <!-- Children -->
+          <div class="branch-children" *ngIf="branch.children && branch.children.length > 0 && branch.expanded">
+            <div class="branch-node" 
+                 *ngFor="let child of branch.children; trackBy: trackByBranch"
+                 [class.selected]="selectedBranches.has(child.id)">
+              
+              <div class="branch-row" [style.padding-left.px]="(getBranchLevel(child) + 1) * 20">
+                <!-- Selection Checkbox -->
+                <div class="branch-checkbox" *ngIf="bulkMode">
+                  <input 
+                    type="checkbox" 
+                    [checked]="selectedBranches.has(child.id)"
+                    (change)="toggleBranchSelection(child)">
+                </div>
+                
+                <!-- Branch Icon -->
+                <div class="branch-icon">
+                  <i class="icon-branch sub-branch"></i>
+                </div>
+                
+                <!-- Branch Info -->
+                <div class="branch-info">
+                  <div class="branch-main">
+                    <h3 class="branch-name">{{ child.name }}</h3>
+                    <span class="branch-code">{{ child.code }}</span>
+                    <span class="branch-status" [class]="getBranchStatusClass(child)">
+                      {{ getBranchStatusText(child) }}
+                    </span>
+                  </div>
+                  
+                  <div class="branch-details" *ngIf="child.description || child.contact_person">
+                    <p class="branch-description" *ngIf="child.description">{{ child.description }}</p>
+                    <div class="branch-contact" *ngIf="child.contact_person">
+                      <span class="contact-person">{{ child.contact_person }}</span>
+                      <span class="contact-email" *ngIf="child.contact_email">{{ child.contact_email }}</span>
+                    </div>
+                  </div>
+                  
+                  <div class="branch-meta">
+                    <span class="meta-item">
+                      <i class="icon-users"></i>
+                      {{ child.users_count || 0 }} users
+                    </span>
+                    <span class="meta-item">
+                      <i class="icon-calendar"></i>
+                      {{ formatDate(child.created_at) }}
+                    </span>
+                  </div>
+                </div>
+                
+                <!-- Branch Actions -->
+                <div class="branch-actions" *ngIf="isManagerOrAdmin">
+                  <button class="action-btn edit" (click)="openEditModal(child)" title="Edit Branch">
+                    <i class="icon-edit"></i>
+                  </button>
+                  <button class="action-btn delete" (click)="openDeleteModal(child)" title="Delete Branch">
+                    <i class="icon-delete"></i>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Empty State -->
+    <div class="empty-state" *ngIf="filteredBranches.length === 0">
+      <div class="empty-content">
+        <i class="icon-branch empty-icon"></i>
+        <h3>No branches found</h3>
+        <p *ngIf="searchTerm || selectedStatus || selectedParent">
+          Try adjusting your filters to see more results.
+        </p>
+        <p *ngIf="!searchTerm && !selectedStatus && !selectedParent">
+          Get started by creating your first branch.
+        </p>
+        <button class="btn btn-primary" (click)="openCreateModal()" *ngIf="isManagerOrAdmin">
+          <i class="icon-plus"></i>
+          Create First Branch
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Create/Edit Modal -->
+  <div class="modal-overlay" *ngIf="showCreateModal || showEditModal" (click)="closeModal()">
+    <div class="modal-content" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <h2>{{ showEditModal ? 'Edit Branch' : 'Create New Branch' }}</h2>
+        <button class="modal-close" (click)="closeModal()">
+          <i class="icon-close"></i>
+        </button>
+      </div>
+      
+      <form [formGroup]="branchForm" (ngSubmit)="onSubmit()" class="modal-form">
+        <div class="form-grid">
+          <div class="form-group">
+            <label for="name" class="form-label">Branch Name *</label>
+            <input 
+              type="text"
+              id="name"
+              class="form-input"
+              formControlName="name"
+              placeholder="Enter branch name"
+              [class.error]="isFieldInvalid('name')">
+            <div class="error-message" *ngIf="isFieldInvalid('name')">
+              {{ getFieldError('name') }}
+            </div>
+          </div>
+          
+          <div class="form-group">
+            <label for="code" class="form-label">Branch Code *</label>
+            <input 
+              type="text"
+              id="code"
+              class="form-input"
+              formControlName="code"
+              placeholder="e.g., BR001"
+              [class.error]="isFieldInvalid('code')">
+            <div class="error-message" *ngIf="isFieldInvalid('code')">
+              {{ getFieldError('code') }}
+            </div>
+          </div>
+          
+          <div class="form-group full-width">
+            <label for="description" class="form-label">Description</label>
+            <textarea 
+              id="description"
+              class="form-textarea"
+              formControlName="description"
+              placeholder="Branch description"
+              rows="3"></textarea>
+          </div>
+          
+          <div class="form-group full-width">
+            <label for="address" class="form-label">Address</label>
+            <textarea 
+              id="address"
+              class="form-textarea"
+              formControlName="address"
+              placeholder="Branch address"
+              rows="2"></textarea>
+          </div>
+          
+          <div class="form-group">
+            <label for="contact_person" class="form-label">Contact Person</label>
+            <input 
+              type="text"
+              id="contact_person"
+              class="form-input"
+              formControlName="contact_person"
+              placeholder="Contact person name">
+          </div>
+          
+          <div class="form-group">
+            <label for="contact_email" class="form-label">Contact Email</label>
+            <input 
+              type="email"
+              id="contact_email"
+              class="form-input"
+              formControlName="contact_email"
+              placeholder="contact@example.com"
+              [class.error]="isFieldInvalid('contact_email')">
+            <div class="error-message" *ngIf="isFieldInvalid('contact_email')">
+              {{ getFieldError('contact_email') }}
+            </div>
+          </div>
+          
+          <div class="form-group">
+            <label for="contact_phone" class="form-label">Contact Phone</label>
+            <input 
+              type="tel"
+              id="contact_phone"
+              class="form-input"
+              formControlName="contact_phone"
+              placeholder="+1 (555) 123-4567"
+              [class.error]="isFieldInvalid('contact_phone')">
+            <div class="error-message" *ngIf="isFieldInvalid('contact_phone')">
+              {{ getFieldError('contact_phone') }}
+            </div>
+          </div>
+          
+          <div class="form-group">
+            <label for="parent_id" class="form-label">Parent Branch</label>
+            <select 
+              id="parent_id"
+              class="form-select"
+              formControlName="parent_id">
+              <option value="">No parent (Root branch)</option>
+              <option *ngFor="let parent of getParentBranches(); trackBy: trackByBranch" 
+                      [value]="parent.id"
+                      [disabled]="showEditModal && selectedBranch && parent.id === selectedBranch.id">
+                {{ parent.name }} ({{ parent.code }})
+              </option>
+            </select>
+          </div>
+          
+          <div class="form-group">
+            <label for="sort_order" class="form-label">Sort Order</label>
+            <input 
+              type="number"
+              id="sort_order"
+              class="form-input"
+              formControlName="sort_order"
+              min="0"
+              [class.error]="isFieldInvalid('sort_order')">
+            <div class="error-message" *ngIf="isFieldInvalid('sort_order')">
+              {{ getFieldError('sort_order') }}
+            </div>
+          </div>
+          
+          <div class="form-group checkbox-group">
+            <div class="checkbox-wrapper">
+              <input 
+                type="checkbox"
+                id="is_active"
+                class="form-checkbox"
+                formControlName="is_active">
+              <label for="is_active" class="checkbox-label">
+                Active Branch
+              </label>
+            </div>
+            <small class="form-hint">Inactive branches won't appear in user assignments</small>
+          </div>
+        </div>
+        
+        <div class="modal-footer">
+          <button 
+            type="button"
+            class="btn btn-secondary"
+            (click)="closeModal()"
+            [disabled]="isSubmitting">
+            Cancel
+          </button>
+          <button 
+            type="submit"
+            class="btn btn-primary"
+            [disabled]="branchForm.invalid || isSubmitting">
+            <span *ngIf="isSubmitting" class="spinner-sm"></span>
+            <i *ngIf="!isSubmitting" [class]="showEditModal ? 'icon-save' : 'icon-plus'"></i>
+            {{ showEditModal ? 'Update Branch' : 'Create Branch' }}
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Delete Confirmation Modal -->
+  <div class="modal-overlay" *ngIf="showDeleteModal" (click)="closeModal()">
+    <div class="modal-content delete-modal" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <h2>Delete Branch</h2>
+        <button class="modal-close" (click)="closeModal()">
+          <i class="icon-close"></i>
+        </button>
+      </div>
+      
+      <div class="modal-body">
+        <div class="delete-warning">
+          <i class="icon-warning"></i>
+          <h3>Are you sure you want to delete this branch?</h3>
+          <p><strong>{{ selectedBranch?.name }}</strong> ({{ selectedBranch?.code }})</p>
+          
+          <div class="warning-details" *ngIf="selectedBranch">
+            <div class="warning-item" *ngIf="selectedBranch.children && selectedBranch.children.length > 0">
+              <i class="icon-hierarchy"></i>
+              <span>This branch has {{ selectedBranch.children.length }} sub-branch(es) that will also be deleted</span>
+            </div>
+            <div class="warning-item" *ngIf="selectedBranch.users_count && selectedBranch.users_count > 0">
+              <i class="icon-users"></i>
+              <span>{{ selectedBranch.users_count }} user(s) are assigned to this branch</span>
+            </div>
+          </div>
+          
+          <p class="warning-text">This action cannot be undone.</p>
+        </div>
+      </div>
+      
+      <div class="modal-footer">
+        <button 
+          type="button"
+          class="btn btn-secondary"
+          (click)="closeModal()"
+          [disabled]="isSubmitting">
+          Cancel
+        </button>
+        <button 
+          type="button"
+          class="btn btn-danger"
+          (click)="deleteBranch()"
+          [disabled]="isSubmitting">
+          <span *ngIf="isSubmitting" class="spinner-sm"></span>
+          <i *ngIf="!isSubmitting" class="icon-delete"></i>
+          Delete Branch
+        </button>
+      </div>
+    </div>
+  </div>
+</div> 

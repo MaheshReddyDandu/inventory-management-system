@@ -233,6 +233,16 @@ export class UserAssignmentComponent implements OnInit, OnDestroy {
     this.applyFilters();
   }
 
+  clearSearch(): void {
+    this.searchTerm = '';
+    this.applyFilters();
+  }
+
+  getStatusLabel(statusValue: string): string {
+    const option = this.statusOptions.find(s => s.value === statusValue);
+    return option ? option.label : statusValue;
+  }
+
   openCreateModal(): void {
     this.editingAssignment = null;
     this.assignmentForm.reset();

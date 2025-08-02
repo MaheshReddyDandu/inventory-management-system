@@ -132,20 +132,20 @@
       <span class="summary-text">Filtered results:</span>
       <div class="active-filters">
         <span class="filter-tag" *ngIf="selectedUnitId">
-          Unit: {{ getUnitName(parseInt(selectedUnitId)) }}
+          Unit: {{ getUnitName(+selectedUnitId) }}
           <button (click)="selectedUnitId = ''; onFilterChange()">×</button>
         </span>
         <span class="filter-tag" *ngIf="selectedUserId">
-          User: {{ getUserName(parseInt(selectedUserId)) }}
+          User: {{ getUserName(+selectedUserId) }}
           <button (click)="selectedUserId = ''; onFilterChange()">×</button>
         </span>
         <span class="filter-tag" *ngIf="selectedStatus">
-          Status: {{ statusOptions.find(s => s.value === selectedStatus)?.label }}
+          Status: {{ getStatusLabel(selectedStatus) }}
           <button (click)="selectedStatus = ''; onStatusChange()">×</button>
         </span>
         <span class="filter-tag" *ngIf="searchTerm">
           Search: "{{ searchTerm }}"
-          <button (click)="searchTerm = ''; onSearchChange({ target: { value: '' } } as any)">×</button>
+          <button (click)="clearSearch()">×</button>
         </span>
         <button class="btn btn-link clear-all" (click)="clearAllFilters()">Clear All</button>
       </div>

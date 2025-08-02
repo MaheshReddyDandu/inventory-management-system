@@ -1,0 +1,709 @@
+<div class="clients-management">
+  <!-- Header Section -->
+  <div class="header-section">
+    <div class="title-area">
+      <h1>
+        <app-modern-icon type="client" size="xl" color="teal"></app-modern-icon>
+        Client Management
+      </h1>
+      <p class="subtitle">Manage client organizations, hierarchy, and relationships</p>
+    </div>
+    
+    <div class="actions-area" *ngIf="isManagerOrAdmin">
+      <button 
+        class="btn btn-secondary"
+        (click)="toggleBulkMode()"
+        [class.active]="bulkMode"
+        [disabled]="isLoading">
+        <app-modern-icon type="bulk" size="sm" color="orange"></app-modern-icon>
+        {{ bulkMode ? 'Exit Bulk Mode' : 'Bulk Actions' }}
+      </button>
+      
+      <button 
+        class="btn btn-primary"
+        (click)="openCreateModal()"
+        [disabled]="isLoading">
+        <app-modern-icon type="plus" size="sm" color="white"></app-modern-icon>
+        Add Client
+      </button>
+    </div>
+  </div>
+
+  <!-- Stats Cards -->
+  <div class="stats-section">
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-icon">
+          <app-modern-icon type="client" size="lg" color="teal"></app-modern-icon>
+        </div>
+        <div class="stat-content">
+          <div class="stat-value">{{ stats.totalClients }}</div>
+          <div class="stat-label">Total Clients</div>
+        </div>
+      </div>
+      
+      <div class="stat-card">
+        <div class="stat-icon active">
+          <app-modern-icon type="check" size="lg" color="success"></app-modern-icon>
+        </div>
+        <div class="stat-content">
+          <div class="stat-value">{{ stats.activeClients }}</div>
+          <div class="stat-label">Active Clients</div>
+        </div>
+      </div>
+      
+      <div class="stat-card">
+        <div class="stat-icon sub">
+          <app-modern-icon type="hierarchy" size="lg" color="indigo"></app-modern-icon>
+        </div>
+        <div class="stat-content">
+          <div class="stat-value">{{ stats.subClients }}</div>
+          <div class="stat-label">Sub Clients</div>
+        </div>
+      </div>
+      
+      <div class="stat-card">
+        <div class="stat-icon users">
+          <app-modern-icon type="users" size="lg" color="blue"></app-modern-icon>
+        </div>
+        <div class="stat-content">
+          <div class="stat-value">{{ stats.assignedUsers }}</div>
+          <div class="stat-label">Assigned Users</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Filters Section -->
+  <div class="filters-section">
+    <div class="filter-grid">
+      <div class="filter-item">
+        <label for="status">Status</label>
+        <select 
+          id="status"
+          class="form-select"
+          [(ngModel)]="selectedStatus"
+          (change)="onStatusChange()">
+          <option *ngFor="let option of statusOptions" [value]="option.value">
+            {{ option.label }}
+          </option>
+        </select>
+      </div>
+      
+      <div class="filter-item">
+        <label for="parent">Parent Type</label>
+        <select 
+          id="parent"
+          class="form-select"
+          [(ngModel)]="selectedParent"
+          (change)="onFilterChange()">
+          <option *ngFor="let option of parentOptions" [value]="option.value">
+            {{ option.label }}
+          </option>
+        </select>
+      </div>
+      
+      <div class="filter-item">
+        <label for="search">Search</label>
+        <div class="search-input">
+          <input 
+            type="text"
+            id="search"
+            class="form-input"
+            placeholder="Search clients by name, code, or contact..."
+            (input)="onSearchChange($event)">
+          <i class="icon-search"></i>
+        </div>
+      </div>
+      
+      <div class="filter-item">
+        <button 
+          class="btn btn-outline"
+          (click)="clearAllFilters()"
+          [disabled]="!searchTerm && !selectedStatus && !selectedParent">
+          <i class="icon-clear"></i>
+          Clear Filters
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bulk Actions Bar -->
+  <div class="bulk-actions-bar" *ngIf="bulkMode">
+    <div class="bulk-info">
+      <span class="selected-count">{{ selectedClients.size }} client(s) selected</span>
+    </div>
+    
+    <div class="bulk-actions">
+      <button 
+        class="btn btn-outline"
+        (click)="selectAllClients()">
+        Select All
+      </button>
+      <button 
+        class="btn btn-outline"
+        (click)="deselectAllClients()">
+        Deselect All
+      </button>
+      <button 
+        class="btn btn-danger"
+        (click)="bulkDeleteClients()"
+        [disabled]="selectedClients.size === 0 || isSubmitting">
+        <i class="icon-delete"></i>
+        Delete Selected
+      </button>
+    </div>
+  </div>
+
+  <!-- Loading State -->
+  <div class="loading-state" *ngIf="isLoading">
+    <div class="spinner"></div>
+    <p>Loading clients...</p>
+  </div>
+
+  <!-- Clients Tree View -->
+  <div class="clients-container" *ngIf="!isLoading">
+    <div class="clients-tree">
+      <ng-container *ngFor="let client of filteredClients; trackBy: trackByClient">
+        <div class="client-node" [class.selected]="selectedClients.has(client.id)">
+          <div class="client-content" 
+               [style.margin-left.px]="getClientLevel(client) * 20">
+            
+            <!-- Checkbox for bulk mode -->
+            <div class="client-checkbox" *ngIf="bulkMode">
+              <input 
+                type="checkbox"
+                [checked]="selectedClients.has(client.id)"
+                (change)="toggleClientSelection(client)">
+            </div>
+            
+            <!-- Expand/Collapse Button -->
+            <button 
+              class="expand-btn"
+              *ngIf="client.children && client.children.length > 0"
+              (click)="toggleClientExpansion(client)">
+              <i class="icon-chevron" 
+                 [class.expanded]="client.expanded"></i>
+            </button>
+            <div class="expand-spacer" *ngIf="!client.children || client.children.length === 0"></div>
+
+            <!-- Client Icon -->
+            <div class="client-icon">
+              <i class="icon-client"></i>
+            </div>
+
+            <!-- Client Info -->
+            <div class="client-info">
+              <div class="client-name">{{ client.name }}</div>
+              <div class="client-meta">
+                <span class="client-code">{{ client.code }}</span>
+                <span class="client-users" *ngIf="client.users_count">
+                  {{ client.users_count }} users
+                </span>
+                <span class="client-description" *ngIf="client.description">
+                  {{ client.description }}
+                </span>
+              </div>
+              <div class="client-contact" *ngIf="client.contact_person || client.contact_email">
+                <span *ngIf="client.contact_person">{{ client.contact_person }}</span>
+                <span *ngIf="client.contact_email"> • {{ client.contact_email }}</span>
+              </div>
+            </div>
+
+            <!-- Client Status -->
+            <div class="client-status">
+              <span class="status-badge" [class]="getClientStatusClass(client)">
+                {{ getClientStatusText(client) }}
+              </span>
+            </div>
+
+            <!-- Client Actions -->
+            <div class="client-actions" *ngIf="isManagerOrAdmin && !bulkMode">
+              <button 
+                class="btn btn-icon btn-edit"
+                (click)="openEditModal(client)"
+                title="Edit Client">
+                <i class="icon-edit"></i>
+              </button>
+              <button 
+                class="btn btn-icon btn-delete"
+                (click)="openDeleteModal(client)"
+                title="Delete Client"
+                *ngIf="isAdmin">
+                <i class="icon-delete"></i>
+              </button>
+            </div>
+          </div>
+
+          <!-- Child Clients -->
+          <div class="child-clients" *ngIf="client.expanded && client.children && client.children.length > 0">
+            <ng-container *ngFor="let child of client.children; trackBy: trackByClient">
+              <div class="client-node" [class.selected]="selectedClients.has(child.id)">
+                <div class="client-content" 
+                     [style.margin-left.px]="(getClientLevel(child) + 1) * 20">
+                  
+                  <!-- Checkbox for bulk mode -->
+                  <div class="client-checkbox" *ngIf="bulkMode">
+                    <input 
+                      type="checkbox"
+                      [checked]="selectedClients.has(child.id)"
+                      (change)="toggleClientSelection(child)">
+                  </div>
+                  
+                  <!-- Expand/Collapse Button -->
+                  <button 
+                    class="expand-btn"
+                    *ngIf="child.children && child.children.length > 0"
+                    (click)="toggleClientExpansion(child)">
+                    <i class="icon-chevron" 
+                       [class.expanded]="child.expanded"></i>
+                  </button>
+                  <div class="expand-spacer" *ngIf="!child.children || child.children.length === 0"></div>
+
+                  <!-- Client Icon -->
+                  <div class="client-icon sub">
+                    <i class="icon-client"></i>
+                  </div>
+
+                  <!-- Client Info -->
+                  <div class="client-info">
+                    <div class="client-name">{{ child.name }}</div>
+                    <div class="client-meta">
+                      <span class="client-code">{{ child.code }}</span>
+                      <span class="client-users" *ngIf="child.users_count">
+                        {{ child.users_count }} users
+                      </span>
+                      <span class="client-description" *ngIf="child.description">
+                        {{ child.description }}
+                      </span>
+                    </div>
+                    <div class="client-contact" *ngIf="child.contact_person || child.contact_email">
+                      <span *ngIf="child.contact_person">{{ child.contact_person }}</span>
+                      <span *ngIf="child.contact_email"> • {{ child.contact_email }}</span>
+                    </div>
+                  </div>
+
+                  <!-- Client Status -->
+                  <div class="client-status">
+                    <span class="status-badge" [class]="getClientStatusClass(child)">
+                      {{ getClientStatusText(child) }}
+                    </span>
+                  </div>
+
+                  <!-- Client Actions -->
+                  <div class="client-actions" *ngIf="isManagerOrAdmin && !bulkMode">
+                    <button 
+                      class="btn btn-icon btn-edit"
+                      (click)="openEditModal(child)"
+                      title="Edit Client">
+                      <i class="icon-edit"></i>
+                    </button>
+                    <button 
+                      class="btn btn-icon btn-delete"
+                      (click)="openDeleteModal(child)"
+                      title="Delete Client"
+                      *ngIf="isAdmin">
+                      <i class="icon-delete"></i>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </ng-container>
+          </div>
+        </div>
+      </ng-container>
+      
+      <!-- Empty State -->
+      <div class="empty-state" *ngIf="filteredClients.length === 0">
+        <div class="empty-icon">
+          <i class="icon-clients"></i>
+        </div>
+        <h3>No clients found</h3>
+        <p *ngIf="searchTerm || selectedStatus || selectedParent">
+          Try adjusting your filters or search terms.
+        </p>
+        <p *ngIf="!searchTerm && !selectedStatus && !selectedParent">
+          Create your first client to get started.
+        </p>
+        <button 
+          class="btn btn-primary"
+          (click)="openCreateModal()"
+          *ngIf="isManagerOrAdmin && !searchTerm && !selectedStatus && !selectedParent">
+          Create First Client
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Create Client Modal -->
+<div class="modal-overlay" *ngIf="showCreateModal" (click)="closeModal()">
+  <div class="modal-container" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <h2>Create New Client</h2>
+      <button class="btn btn-icon btn-close" (click)="closeModal()">
+        <i class="icon-close"></i>
+      </button>
+    </div>
+    
+    <form [formGroup]="clientForm" (ngSubmit)="onSubmit()" class="modal-form">
+      <div class="modal-body">
+        <div class="form-grid">
+          <!-- Basic Information -->
+          <div class="form-section">
+            <h3>Basic Information</h3>
+            
+            <div class="form-group">
+              <label for="name">Client Name *</label>
+              <input 
+                type="text"
+                id="name"
+                class="form-input"
+                formControlName="name"
+                placeholder="Enter client name"
+                [class.error]="isFieldInvalid('name')">
+              <div class="error-message" *ngIf="isFieldInvalid('name')">
+                {{ getFieldError('name') }}
+              </div>
+            </div>
+            
+            <div class="form-group">
+              <label for="code">Client Code *</label>
+              <input 
+                type="text"
+                id="code"
+                class="form-input"
+                formControlName="code"
+                placeholder="CL001"
+                [class.error]="isFieldInvalid('code')">
+              <div class="error-message" *ngIf="isFieldInvalid('code')">
+                {{ getFieldError('code') }}
+              </div>
+              <small class="form-hint">Format: CL001, CL002, etc.</small>
+            </div>
+            
+            <div class="form-group">
+              <label for="parent_id">Parent Client</label>
+              <select 
+                id="parent_id"
+                class="form-select"
+                formControlName="parent_id">
+                <option value="">No parent (root level)</option>
+                <option *ngFor="let client of getParentClients()" [value]="client.id">
+                  {{ client.name }} ({{ client.code }})
+                </option>
+              </select>
+            </div>
+            
+            <div class="form-group">
+              <label for="description">Description</label>
+              <textarea 
+                id="description"
+                class="form-textarea"
+                formControlName="description"
+                placeholder="Brief description of the client"
+                rows="3"></textarea>
+            </div>
+            
+            <div class="form-group">
+              <label for="sort_order">Sort Order</label>
+              <input 
+                type="number"
+                id="sort_order"
+                class="form-input"
+                formControlName="sort_order"
+                min="0"
+                placeholder="0">
+            </div>
+          </div>
+          
+          <!-- Contact Information -->
+          <div class="form-section">
+            <h3>Contact Information</h3>
+            
+            <div class="form-group">
+              <label for="contact_person">Contact Person</label>
+              <input 
+                type="text"
+                id="contact_person"
+                class="form-input"
+                formControlName="contact_person"
+                placeholder="Name of contact person">
+            </div>
+            
+            <div class="form-group">
+              <label for="contact_email">Contact Email</label>
+              <input 
+                type="email"
+                id="contact_email"
+                class="form-input"
+                formControlName="contact_email"
+                placeholder="contact@client.com"
+                [class.error]="isFieldInvalid('contact_email')">
+              <div class="error-message" *ngIf="isFieldInvalid('contact_email')">
+                {{ getFieldError('contact_email') }}
+              </div>
+            </div>
+            
+            <div class="form-group">
+              <label for="contact_phone">Contact Phone</label>
+              <input 
+                type="tel"
+                id="contact_phone"
+                class="form-input"
+                formControlName="contact_phone"
+                placeholder="+1 (555) 123-4567"
+                [class.error]="isFieldInvalid('contact_phone')">
+              <div class="error-message" *ngIf="isFieldInvalid('contact_phone')">
+                {{ getFieldError('contact_phone') }}
+              </div>
+            </div>
+            
+            <div class="form-group">
+              <label for="address">Address</label>
+              <textarea 
+                id="address"
+                class="form-textarea"
+                formControlName="address"
+                placeholder="Physical address of the client"
+                rows="3"></textarea>
+            </div>
+            
+            <div class="form-group">
+              <label for="is_active">Status</label>
+              <div class="checkbox-group">
+                <input 
+                  type="checkbox"
+                  id="is_active"
+                  formControlName="is_active">
+                <label for="is_active">Active</label>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <div class="modal-footer">
+        <button 
+          type="button"
+          class="btn btn-secondary"
+          (click)="closeModal()">
+          Cancel
+        </button>
+        <button 
+          type="submit"
+          class="btn btn-primary"
+          [disabled]="clientForm.invalid || isSubmitting">
+          <span *ngIf="isSubmitting" class="spinner-sm"></span>
+          Create Client
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Edit Client Modal -->
+<div class="modal-overlay" *ngIf="showEditModal" (click)="closeModal()">
+  <div class="modal-container" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <h2>Edit Client</h2>
+      <button class="btn btn-icon btn-close" (click)="closeModal()">
+        <i class="icon-close"></i>
+      </button>
+    </div>
+    
+    <form [formGroup]="clientForm" (ngSubmit)="onSubmit()" class="modal-form">
+      <div class="modal-body">
+        <div class="form-grid">
+          <!-- Basic Information -->
+          <div class="form-section">
+            <h3>Basic Information</h3>
+            
+            <div class="form-group">
+              <label for="edit_name">Client Name *</label>
+              <input 
+                type="text"
+                id="edit_name"
+                class="form-input"
+                formControlName="name"
+                placeholder="Enter client name"
+                [class.error]="isFieldInvalid('name')">
+              <div class="error-message" *ngIf="isFieldInvalid('name')">
+                {{ getFieldError('name') }}
+              </div>
+            </div>
+            
+            <div class="form-group">
+              <label for="edit_code">Client Code *</label>
+              <input 
+                type="text"
+                id="edit_code"
+                class="form-input"
+                formControlName="code"
+                placeholder="CL001"
+                [class.error]="isFieldInvalid('code')">
+              <div class="error-message" *ngIf="isFieldInvalid('code')">
+                {{ getFieldError('code') }}
+              </div>
+              <small class="form-hint">Format: CL001, CL002, etc.</small>
+            </div>
+            
+            <div class="form-group">
+              <label for="edit_parent_id">Parent Client</label>
+              <select 
+                id="edit_parent_id"
+                class="form-select"
+                formControlName="parent_id">
+                <option value="">No parent (root level)</option>
+                <option *ngFor="let client of getParentClients()" [value]="client.id">
+                  {{ client.name }} ({{ client.code }})
+                </option>
+              </select>
+            </div>
+            
+            <div class="form-group">
+              <label for="edit_description">Description</label>
+              <textarea 
+                id="edit_description"
+                class="form-textarea"
+                formControlName="description"
+                placeholder="Brief description of the client"
+                rows="3"></textarea>
+            </div>
+            
+            <div class="form-group">
+              <label for="edit_sort_order">Sort Order</label>
+              <input 
+                type="number"
+                id="edit_sort_order"
+                class="form-input"
+                formControlName="sort_order"
+                min="0"
+                placeholder="0">
+            </div>
+          </div>
+          
+          <!-- Contact Information -->
+          <div class="form-section">
+            <h3>Contact Information</h3>
+            
+            <div class="form-group">
+              <label for="edit_contact_person">Contact Person</label>
+              <input 
+                type="text"
+                id="edit_contact_person"
+                class="form-input"
+                formControlName="contact_person"
+                placeholder="Name of contact person">
+            </div>
+            
+            <div class="form-group">
+              <label for="edit_contact_email">Contact Email</label>
+              <input 
+                type="email"
+                id="edit_contact_email"
+                class="form-input"
+                formControlName="contact_email"
+                placeholder="contact@client.com"
+                [class.error]="isFieldInvalid('contact_email')">
+              <div class="error-message" *ngIf="isFieldInvalid('contact_email')">
+                {{ getFieldError('contact_email') }}
+              </div>
+            </div>
+            
+            <div class="form-group">
+              <label for="edit_contact_phone">Contact Phone</label>
+              <input 
+                type="tel"
+                id="edit_contact_phone"
+                class="form-input"
+                formControlName="contact_phone"
+                placeholder="+1 (555) 123-4567"
+                [class.error]="isFieldInvalid('contact_phone')">
+              <div class="error-message" *ngIf="isFieldInvalid('contact_phone')">
+                {{ getFieldError('contact_phone') }}
+              </div>
+            </div>
+            
+            <div class="form-group">
+              <label for="edit_address">Address</label>
+              <textarea 
+                id="edit_address"
+                class="form-textarea"
+                formControlName="address"
+                placeholder="Physical address of the client"
+                rows="3"></textarea>
+            </div>
+            
+            <div class="form-group">
+              <label for="edit_is_active">Status</label>
+              <div class="checkbox-group">
+                <input 
+                  type="checkbox"
+                  id="edit_is_active"
+                  formControlName="is_active">
+                <label for="edit_is_active">Active</label>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <div class="modal-footer">
+        <button 
+          type="button"
+          class="btn btn-secondary"
+          (click)="closeModal()">
+          Cancel
+        </button>
+        <button 
+          type="submit"
+          class="btn btn-primary"
+          [disabled]="clientForm.invalid || isSubmitting">
+          <span *ngIf="isSubmitting" class="spinner-sm"></span>
+          Update Client
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div class="modal-overlay" *ngIf="showDeleteModal" (click)="closeModal()">
+  <div class="modal-container delete-modal" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <h2>Delete Client</h2>
+      <button class="btn btn-icon btn-close" (click)="closeModal()">
+        <i class="icon-close"></i>
+      </button>
+    </div>
+    
+    <div class="modal-body">
+      <div class="delete-warning">
+        <div class="warning-icon">
+          <i class="icon-warning"></i>
+        </div>
+        <h3>Are you sure you want to delete this client?</h3>
+        <p>This action will permanently delete <strong>{{ selectedClient?.name }}</strong> and all associated data.</p>
+        <p class="warning-text">This action cannot be undone.</p>
+      </div>
+    </div>
+    
+    <div class="modal-footer">
+      <button 
+        type="button"
+        class="btn btn-secondary"
+        (click)="closeModal()">
+        Cancel
+      </button>
+      <button 
+        type="button"
+        class="btn btn-danger"
+        (click)="deleteClient()"
+        [disabled]="isSubmitting">
+        <span *ngIf="isSubmitting" class="spinner-sm"></span>
+        Delete Client
+      </button>
+    </div>
+  </div>
+</div> 

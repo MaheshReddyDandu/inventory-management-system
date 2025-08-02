@@ -37,6 +37,26 @@ export const routes: Routes = [
     canActivate: [authGuard]
   },
   {
+    path: 'organization/branches',
+    loadComponent: () => import('./components/organization/branches-management.component').then(m => m.BranchesManagementComponent),
+    canActivate: [authGuard]
+  },
+  {
+    path: 'organization/clients',
+    loadComponent: () => import('./components/organization/clients-management.component').then(m => m.ClientsManagementComponent),
+    canActivate: [authGuard]
+  },
+  {
+    path: 'organization/departments',
+    loadComponent: () => import('./components/organization/departments-management.component').then(m => m.DepartmentsManagementComponent),
+    canActivate: [authGuard]
+  },
+  {
+    path: 'organization/projects',
+    loadComponent: () => import('./components/organization/projects-management.component').then(m => m.ProjectsManagementComponent),
+    canActivate: [authGuard]
+  },
+  {
     path: 'organization/assignments',
     loadComponent: () => import('./components/organization/user-assignment.component').then(m => m.UserAssignmentComponent),
     canActivate: [authGuard]
