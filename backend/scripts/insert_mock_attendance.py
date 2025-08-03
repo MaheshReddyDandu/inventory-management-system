@@ -28,8 +28,8 @@ SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 LOCATIONS = [
     {
         "name": "Market Street, Hayes Valley, San Francisco, California, 94102, United States",
-        "lat": Decimal("37.774900"),
-        "lng": Decimal("-122.419400")
+        "lat": Decimal("14.4426"),
+        "lng": Decimal("79.9865")
     },
     {
         "name": "Financial District, San Francisco, California, 94111, United States", 

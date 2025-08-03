@@ -1,0 +1,197 @@
+<div class="profile-overlay" *ngIf="isOpen" (click)="onBackdropClick($event)">
+  <div class="profile-modal">
+    <!-- Header -->
+    <div class="profile-header">
+      <div class="header-content">
+        <div class="user-avatar">
+          <div class="avatar-circle">
+            {{ getUserInitials() }}
+          </div>
+        </div>
+        <div class="user-info">
+          <h2 class="user-name">{{ currentUser?.first_name }} {{ currentUser?.last_name }}</h2>
+          <p class="user-email">{{ currentUser?.email }}</p>
+          <div class="user-meta">
+            <span class="username">{{ currentUser?.username }}</span>
+            <span class="user-id">ID: {{ currentUser?.id }}</span>
+          </div>
+        </div>
+      </div>
+      <button class="close-btn" (click)="closeOverlay.emit()">
+        <span class="close-icon">×</span>
+      </button>
+    </div>
+
+    <!-- Profile Content -->
+    <div class="profile-content">
+      <!-- System Role Section -->
+      <div class="profile-section">
+        <div class="section-header">
+          <h3 class="section-title">
+            <span class="section-icon">{{ getSystemRoleIcon(currentUser?.role?.name || '') }}</span>
+            System Role
+          </h3>
+        </div>
+        <div class="role-card">
+          <div class="role-badge" [class]="getSystemRoleClass(currentUser?.role?.name || '')">
+            <span class="role-icon">{{ getSystemRoleIcon(currentUser?.role?.name || '') }}</span>
+            <span class="role-name">{{ currentUser?.role?.name | titlecase }}</span>
+          </div>
+          <p class="role-description">System role and permissions</p>
+        </div>
+      </div>
+
+      <!-- Account Status Section -->
+      <div class="profile-section">
+        <div class="section-header">
+          <h3 class="section-title">
+            <span class="section-icon">📊</span>
+            Account Status
+          </h3>
+        </div>
+        <div class="status-grid">
+          <div class="status-item">
+            <span class="status-label">Account Status</span>
+            <span class="status-badge" [class]="getStatusClass(currentUser?.is_active || false)">
+              {{ getStatusText(currentUser?.is_active || false) }}
+            </span>
+          </div>
+          <div class="status-item">
+            <span class="status-label">Email Verification</span>
+            <span class="status-badge" [class]="getVerificationClass(currentUser?.is_verified || false)">
+              {{ getVerificationText(currentUser?.is_verified || false) }}
+            </span>
+          </div>
+          <div class="status-item">
+            <span class="status-label">Last Login</span>
+            <span class="status-value">{{ getLastLoginText() }}</span>
+          </div>
+          <div class="status-item">
+            <span class="status-label">Member Since</span>
+            <span class="status-value">{{ formatDate(currentUser?.created_at || '') }}</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Organizational Assignments Section -->
+      <div class="profile-section" *ngIf="currentUser?.organizational_assignments as assignments">
+        <ng-container *ngIf="assignments.length > 0; else noAssignments">
+          <div class="section-header">
+            <h3 class="section-title">
+              <span class="section-icon">🏢</span>
+              Organizational Assignments
+            </h3>
+            <span class="assignment-count">{{ assignments.length }} assignment(s)</span>
+          </div>
+
+          <!-- Primary Assignment -->
+          <div class="assignments-container" *ngIf="getPrimaryAssignments().length > 0">
+            <h4 class="assignment-subtitle">
+              <span class="subtitle-icon">⭐</span>
+              Primary Assignment
+            </h4>
+            <div class="assignment-card primary" *ngFor="let assignment of getPrimaryAssignments()">
+              <div class="assignment-header">
+                <div class="unit-info">
+                  <span class="unit-icon">{{ getUnitTypeIcon(assignment.organizational_unit_type) }}</span>
+                  <div class="unit-details">
+                    <h5 class="unit-name">{{ assignment.organizational_unit_name }}</h5>
+                    <span class="unit-type">{{ getUnitTypeLabel(assignment.organizational_unit_type) }}</span>
+                  </div>
+                </div>
+                <div class="assignment-badge primary-badge">
+                  <span class="badge-icon">⭐</span>
+                  <span class="badge-text">Primary</span>
+                </div>
+              </div>
+              <div class="assignment-details">
+                <div class="detail-item">
+                  <span class="detail-label">Role:</span>
+                  <span class="role-badge" [class]="getRoleColor(assignment.role_in_unit)">
+                    {{ getRoleInUnitLabel(assignment.role_in_unit) }}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Secondary Assignments -->
+          <div class="assignments-container" *ngIf="getSecondaryAssignments().length > 0">
+            <h4 class="assignment-subtitle">
+              <span class="subtitle-icon">📋</span>
+              Additional Assignments
+            </h4>
+            <div class="assignment-card secondary" *ngFor="let assignment of getSecondaryAssignments()">
+              <div class="assignment-header">
+                <div class="unit-info">
+                  <span class="unit-icon">{{ getUnitTypeIcon(assignment.organizational_unit_type) }}</span>
+                  <div class="unit-details">
+                    <h5 class="unit-name">{{ assignment.organizational_unit_name }}</h5>
+                    <span class="unit-type">{{ getUnitTypeLabel(assignment.organizational_unit_type) }}</span>
+                  </div>
+                </div>
+              </div>
+              <div class="assignment-details">
+                <div class="detail-item">
+                  <span class="detail-label">Role:</span>
+                  <span class="role-badge" [class]="getRoleColor(assignment.role_in_unit)">
+                    {{ getRoleInUnitLabel(assignment.role_in_unit) }}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Assignments Summary -->
+          <div class="assignments-summary">
+            <div class="summary-grid">
+              <div class="summary-item" *ngIf="getAssignmentsByType('branch').length > 0">
+                <span class="summary-icon">🏢</span>
+                <span class="summary-count">{{ getAssignmentsByType('branch').length }}</span>
+                <span class="summary-label">Branches</span>
+              </div>
+              <div class="summary-item" *ngIf="getAssignmentsByType('client').length > 0">
+                <span class="summary-icon">🤝</span>
+                <span class="summary-count">{{ getAssignmentsByType('client').length }}</span>
+                <span class="summary-label">Clients</span>
+              </div>
+              <div class="summary-item" *ngIf="getAssignmentsByType('department').length > 0">
+                <span class="summary-icon">🏛️</span>
+                <span class="summary-count">{{ getAssignmentsByType('department').length }}</span>
+                <span class="summary-label">Departments</span>
+              </div>
+              <div class="summary-item" *ngIf="getAssignmentsByType('project').length > 0">
+                <span class="summary-icon">📋</span>
+                <span class="summary-count">{{ getAssignmentsByType('project').length }}</span>
+                <span class="summary-label">Projects</span>
+              </div>
+            </div>
+          </div>
+        </ng-container>
+      </div>
+
+      <!-- No Assignments Template -->
+      <ng-template #noAssignments>
+        <div class="profile-section">
+          <div class="no-assignments">
+            <div class="no-assignments-icon">🏢</div>
+            <h4 class="no-assignments-title">No Organizational Assignments</h4>
+            <p class="no-assignments-text">This user hasn't been assigned to any organizational units yet.</p>
+          </div>
+        </div>
+      </ng-template>
+    </div>
+
+    <!-- Profile Actions -->
+    <div class="profile-actions">
+      <button class="action-btn secondary" (click)="onChangePassword()">
+        <span class="action-icon">🔑</span>
+        <span class="action-text">Change Password</span>
+      </button>
+      <button class="action-btn danger" (click)="onLogout()">
+        <span class="action-icon">🚪</span>
+        <span class="action-text">Logout</span>
+      </button>
+    </div>
+  </div>
+</div> 

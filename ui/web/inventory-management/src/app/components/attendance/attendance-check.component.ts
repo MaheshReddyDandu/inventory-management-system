@@ -59,7 +59,7 @@ export class AttendanceCheckComponent implements OnInit, OnDestroy {
   organizationalUnits: OrganizationalUnit[] = [];
   private subscription = new Subscription();
   
-  // Collapsible date sections state
+  // Collapsible date sections state - DEFAULT TO COLLAPSED
   collapsedDates: Set<string> = new Set(); // Track which dates are collapsed
   
   checkInForm: FormGroup;
@@ -71,6 +71,10 @@ export class AttendanceCheckComponent implements OnInit, OnDestroy {
   successMessage = '';
   
   currentLocation: { latitude: number; longitude: number; address?: string } | null = null;
+  
+  // User's timezone and locale for dynamic formatting
+  userTimezone: string = Intl.DateTimeFormat().resolvedOptions().timeZone;
+  userLocale: string = navigator.language || 'en-US';
   
   workTypes = [
     { value: 'office', label: 'Office Work' },
@@ -91,6 +95,12 @@ export class AttendanceCheckComponent implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     this.currentUser = this.authService.getCurrentUserValue();
+    
+    if (!this.currentUser) {
+      this.errorMessage = 'Please log in to view attendance data';
+      return;
+    }
+    
     this.loadOrganizationalUnits();
     this.getCurrentLocation();
     
@@ -98,8 +108,13 @@ export class AttendanceCheckComponent implements OnInit, OnDestroy {
     this.subscription.add(
       this.attendanceStateService.attendanceState$.subscribe(state => {
         this.attendanceState = state;
+        // Initialize all sections as collapsed by default
+        this.initializeCollapsedSections();
       })
     );
+
+    // Force refresh attendance state when component loads
+    this.attendanceStateService.forceRefresh();
 
     // Set up scroll listener for infinite loading
     this.setupInfiniteScroll();
@@ -120,6 +135,7 @@ export class AttendanceCheckComponent implements OnInit, OnDestroy {
 
   createCheckOutForm(): FormGroup {
     return this.fb.group({
+      location_name: [''],
       notes: [''],
       work_summary: ['']
     });
@@ -137,8 +153,15 @@ export class AttendanceCheckComponent implements OnInit, OnDestroy {
       });
   }
 
-  // These methods are no longer needed as we use the state service
-  // loadTodayAttendance and loadTodaySessions are handled by AttendanceStateService
+  // Initialize all sections as collapsed by default
+  private initializeCollapsedSections(): void {
+    if (this.attendanceState?.allSessions) {
+      const sessionsByDate = this.getSessionsByDate();
+      sessionsByDate.forEach(dateGroup => {
+        this.collapsedDates.add(dateGroup.date);
+      });
+    }
+  }
 
   getCurrentLocation(): void {
     this.isLocationLoading = true;
@@ -148,7 +171,7 @@ export class AttendanceCheckComponent implements OnInit, OnDestroy {
         this.isLocationLoading = false;
         
         // Check if this is mock GPS (San Francisco coordinates)
-        const isMockGPS = location.latitude === 37.7749 && location.longitude === -122.4194;
+        const isMockGPS = location.latitude === 14.4426 && location.longitude === 79.9865;
         const locationLabel = isMockGPS ? 'Mock GPS Location' : 'Current Location';
         
         // Set location in forms
@@ -230,9 +253,8 @@ export class AttendanceCheckComponent implements OnInit, OnDestroy {
       .then(location => {
         this.currentLocation = location;
         const checkOutData: CheckOutRequest = {
-          attendance_id: this.attendanceState!.currentSession!.id,
-          work_summary: this.checkOutForm.value.notes || '',
           notes: this.checkOutForm.value.notes || '',
+          work_summary: this.checkOutForm.value.work_summary || '',
           latitude: location.latitude,
           longitude: location.longitude
         };
@@ -262,7 +284,7 @@ export class AttendanceCheckComponent implements OnInit, OnDestroy {
   }
 
   refreshAttendance(): void {
-          // loadTodayAttendance is now handled by AttendanceStateService
+    this.attendanceStateService.manualRefresh();
   }
 
   getStatusClass(status: string): string {
@@ -281,7 +303,7 @@ export class AttendanceCheckComponent implements OnInit, OnDestroy {
     return type ? type.label : workType;
   }
 
-    calculateWorkDuration(): string {
+  calculateWorkDuration(): string {
     const currentSession = this.attendanceState?.currentSession;
     if (!currentSession?.check_in_time) return '--';
     
@@ -307,11 +329,42 @@ export class AttendanceCheckComponent implements OnInit, OnDestroy {
     return `${diffHours}h ${diffMinutes}m`;
   }
 
+  // Enhanced time formatting with dynamic timezone and locale
   formatTime(dateString: string): string {
-    return new Date(dateString).toLocaleTimeString('en-US', {
-      hour: '2-digit',
-      minute: '2-digit'
-    });
+    try {
+      const date = new Date(dateString);
+      return date.toLocaleTimeString(this.userLocale, {
+        hour: '2-digit',
+        minute: '2-digit',
+        timeZone: this.userTimezone
+      });
+    } catch (error) {
+      // Fallback to simple formatting if locale fails
+      return new Date(dateString).toLocaleTimeString('en-US', {
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+    }
+  }
+
+  // Enhanced date formatting with dynamic timezone and locale
+  formatDate(dateString: string): string {
+    try {
+      const date = new Date(dateString);
+      return date.toLocaleDateString(this.userLocale, {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+        timeZone: this.userTimezone
+      });
+    } catch (error) {
+      // Fallback to simple formatting if locale fails
+      return new Date(dateString).toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+      });
+    }
   }
 
   get isCheckedIn(): boolean {
@@ -324,8 +377,19 @@ export class AttendanceCheckComponent implements OnInit, OnDestroy {
               !this.attendanceState.isCheckedIn);
   }
 
+  // Enhanced current date with timezone
   getCurrentDate(): string {
-    return new Date().toLocaleDateString();
+    try {
+      return new Date().toLocaleDateString(this.userLocale, {
+        weekday: 'long',
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+        timeZone: this.userTimezone
+      });
+    } catch (error) {
+      return new Date().toLocaleDateString();
+    }
   }
 
   getGrossHours(): string {
@@ -337,10 +401,6 @@ export class AttendanceCheckComponent implements OnInit, OnDestroy {
       window.open(`https://www.google.com/maps?q=${lat},${lng}`, '_blank');
     }
   }
-
-  // refreshLocation(): void {
-  //   this.getCurrentLocation();
-  // }
 
   isFieldInvalid(formGroup: FormGroup, fieldName: string): boolean {
     const field = formGroup.get(fieldName);
@@ -381,18 +441,21 @@ export class AttendanceCheckComponent implements OnInit, OnDestroy {
     }
   }
 
-  // Group sessions by date for display
+  // Enhanced session grouping with better date comparison
   getSessionsByDate(): { date: string, sessions: Attendance[] }[] {
     if (!this.attendanceState?.allSessions) return [];
     
     const sessionGroups: { [key: string]: Attendance[] } = {};
     
     this.attendanceState.allSessions.forEach(session => {
-      const sessionDate = new Date(session.check_in_time).toISOString().split('T')[0];
-      if (!sessionGroups[sessionDate]) {
-        sessionGroups[sessionDate] = [];
+      // Use local date for grouping to avoid timezone issues
+      const sessionDate = new Date(session.check_in_time);
+      const dateKey = sessionDate.toLocaleDateString('en-CA'); // YYYY-MM-DD format
+      
+      if (!sessionGroups[dateKey]) {
+        sessionGroups[dateKey] = [];
       }
-      sessionGroups[sessionDate].push(session);
+      sessionGroups[dateKey].push(session);
     });
     
     // Convert to array and sort by date (newest first)
@@ -406,28 +469,55 @@ export class AttendanceCheckComponent implements OnInit, OnDestroy {
       }));
   }
 
-  // Format date header for display
+  // Enhanced date header formatting with timezone awareness
   formatDateHeader(dateString: string): string {
-    const date = new Date(dateString);
-    const today = new Date();
-    const yesterday = new Date(today);
-    yesterday.setDate(yesterday.getDate() - 1);
-    
-    const dateOnly = date.toISOString().split('T')[0];
-    const todayOnly = today.toISOString().split('T')[0];
-    const yesterdayOnly = yesterday.toISOString().split('T')[0];
-    
-    if (dateOnly === todayOnly) {
-      return 'Today';
-    } else if (dateOnly === yesterdayOnly) {
-      return 'Yesterday';
-    } else {
-      return date.toLocaleDateString('en-US', { 
-        weekday: 'long', 
-        year: 'numeric', 
-        month: 'long', 
-        day: 'numeric' 
-      });
+    try {
+      const date = new Date(dateString);
+      const today = new Date();
+      const yesterday = new Date(today);
+      yesterday.setDate(yesterday.getDate() - 1);
+      
+      // Use local date comparison
+      const dateOnly = date.toLocaleDateString('en-CA');
+      const todayOnly = today.toLocaleDateString('en-CA');
+      const yesterdayOnly = yesterday.toLocaleDateString('en-CA');
+      
+      if (dateOnly === todayOnly) {
+        return 'Today';
+      } else if (dateOnly === yesterdayOnly) {
+        return 'Yesterday';
+      } else {
+        return date.toLocaleDateString(this.userLocale, { 
+          weekday: 'long', 
+          year: 'numeric', 
+          month: 'long', 
+          day: 'numeric',
+          timeZone: this.userTimezone
+        });
+      }
+    } catch (error) {
+      // Fallback to simple formatting
+      const date = new Date(dateString);
+      const today = new Date();
+      const yesterday = new Date(today);
+      yesterday.setDate(yesterday.getDate() - 1);
+      
+      const dateOnly = date.toISOString().split('T')[0];
+      const todayOnly = today.toISOString().split('T')[0];
+      const yesterdayOnly = yesterday.toISOString().split('T')[0];
+      
+      if (dateOnly === todayOnly) {
+        return 'Today';
+      } else if (dateOnly === yesterdayOnly) {
+        return 'Yesterday';
+      } else {
+        return date.toLocaleDateString('en-US', { 
+          weekday: 'long', 
+          year: 'numeric', 
+          month: 'long', 
+          day: 'numeric' 
+        });
+      }
     }
   }
 
@@ -483,9 +573,10 @@ export class AttendanceCheckComponent implements OnInit, OnDestroy {
       return '';
     }
     const oldestSession = this.attendanceState.allSessions[this.attendanceState.allSessions.length - 1];
-    return new Date(oldestSession.check_in_time).toLocaleDateString('en-US', { 
+    return new Date(oldestSession.check_in_time).toLocaleDateString(this.userLocale, { 
       month: 'short', 
-      day: 'numeric' 
+      day: 'numeric',
+      timeZone: this.userTimezone
     });
   }
 
@@ -495,9 +586,10 @@ export class AttendanceCheckComponent implements OnInit, OnDestroy {
       return '';
     }
     const newestSession = this.attendanceState.allSessions[0];
-    return new Date(newestSession.check_in_time).toLocaleDateString('en-US', { 
+    return new Date(newestSession.check_in_time).toLocaleDateString(this.userLocale, { 
       month: 'short', 
-      day: 'numeric' 
+      day: 'numeric',
+      timeZone: this.userTimezone
     });
   }
 

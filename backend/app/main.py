@@ -60,13 +60,46 @@ async def add_process_time_header(request: Request, call_next):
     except Exception as e:
         process_time = time.time() - start_time
         metrics_collector.record_request(process_time, False)
-        raise e
+        
+        # Log the error
+        print(f"Middleware caught exception: {type(e).__name__}: {str(e)}")
+        print(f"Request path: {request.url.path}")
+        
+        # Re-raise the exception to be handled by the global exception handler
+        raise
 
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception):
+    # Log the error for debugging
+    print(f"Unhandled exception: {type(exc).__name__}: {str(exc)}")
+    print(f"Request path: {request.url.path}")
+    print(f"Request method: {request.method}")
+    
+    # Handle specific exceptions
+    if isinstance(exc, HTTPException):
+        return JSONResponse(
+            status_code=exc.status_code,
+            content={"detail": exc.detail}
+        )
+    
+    # Handle timezone-related errors
+    if "timezone" in str(exc).lower() or "offset-naive" in str(exc).lower():
+        return JSONResponse(
+            status_code=500,
+            content={"detail": "Server configuration error. Please contact support."}
+        )
+    
+    # Handle database-related errors
+    if "database" in str(exc).lower() or "connection" in str(exc).lower():
+        return JSONResponse(
+            status_code=503,
+            content={"detail": "Database connection error. Please try again later."}
+        )
+    
+    # Generic error response
     return JSONResponse(
         status_code=500,
-        content={"detail": "Internal server error"}
+        content={"detail": "Internal server error. Please try again later."}
     )
 
 @app.get("/health")

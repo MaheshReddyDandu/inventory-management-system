@@ -9,6 +9,13 @@ class UserBase(BaseModel):
     username: Optional[str] = None
     product_id: Optional[str] = None
 
+class UserAssignmentCreate(BaseModel):
+    organizational_unit_id: int
+    role_in_unit: str = "member"  # manager, member, lead, supervisor
+    is_primary: bool = False
+    start_date: Optional[datetime] = None
+    end_date: Optional[datetime] = None
+
 class UserCreate(BaseModel):
     email: EmailStr
     first_name: str
@@ -16,6 +23,7 @@ class UserCreate(BaseModel):
     password: str
     role_id: int = 1  # Default to admin role
     product_id: Optional[str] = None  # Optional - will be auto-generated if not provided
+    organizational_assignments: Optional[List[UserAssignmentCreate]] = []  # New field for organizational assignments
     # username is not required from the client
     
     @validator('password')
@@ -35,12 +43,28 @@ class UserLogin(BaseModel):
     password: str
     product_id: Optional[str] = None  # Optional - will be found by email if not provided
 
+class UserAssignmentResponse(BaseModel):
+    id: int
+    organizational_unit_id: int
+    organizational_unit_name: str
+    organizational_unit_type: str
+    role_in_unit: str
+    is_primary: bool
+    start_date: Optional[datetime] = None
+    end_date: Optional[datetime] = None
+    is_active: bool
+    created_at: datetime
+    
+    class Config:
+        from_attributes = True
+
 class UserResponse(UserBase):
     id: int
     uuid: str
     is_active: bool
     is_verified: bool
     role: 'RoleResponse'
+    organizational_assignments: List[UserAssignmentResponse] = []
     created_at: datetime
     last_login: Optional[datetime] = None
     
@@ -85,4 +109,25 @@ class PasswordResetConfirm(BaseModel):
 
 class ChangePasswordRequest(BaseModel):
     old_password: str
-    new_password: str 
+    new_password: str
+
+class UserUpdate(BaseModel):
+    email: Optional[str] = None
+    first_name: Optional[str] = None
+    last_name: Optional[str] = None
+    password: Optional[str] = None
+    role_id: Optional[int] = None
+    is_active: Optional[bool] = None
+    is_verified: Optional[bool] = None
+    product_id: Optional[str] = None
+    organizational_assignments: Optional[List[UserAssignmentCreate]] = None
+
+class OrganizationalUnitOption(BaseModel):
+    id: int
+    name: str
+    unit_type: str
+    code: str
+    description: Optional[str] = None
+    
+    class Config:
+        from_attributes = True 

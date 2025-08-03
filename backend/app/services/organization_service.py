@@ -11,7 +11,7 @@ from app.schemas.organization import (
     CheckInRequest, CheckOutRequest
 )
 from fastapi import HTTPException, status
-from datetime import datetime, date, timedelta
+from datetime import datetime, date, timedelta, timezone
 from typing import List, Dict, Optional
 import math
 import requests
@@ -67,7 +67,7 @@ class OrganizationService:
             if hasattr(unit, field):
                 setattr(unit, field, value)
         
-        unit.updated_at = datetime.utcnow()
+        unit.updated_at = datetime.utcnow().replace(tzinfo=timezone.utc)
         self.db.commit()
         self.db.refresh(unit)
         
@@ -250,95 +250,117 @@ class OrganizationService:
     # Attendance Methods
     def check_in(self, user_id: int, product_id: str, check_in_data: CheckInRequest) -> Attendance:
         """Mark attendance check-in"""
-        
-        # Check if already checked in today
-        today = date.today()
-        existing_attendance = self.db.query(Attendance).filter(
-            Attendance.user_id == user_id,
-            Attendance.product_id == product_id,
-            func.date(Attendance.check_in_time) == today,
-            Attendance.check_out_time == None
-        ).first()
-        
-        if existing_attendance:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Already checked in today"
-            )
-        
-        # Validate location if work_type is office
-        if check_in_data.work_type == 'office':
-            # Check if this is mock GPS (skip validation for development)
-            is_mock_gps = (float(check_in_data.latitude) == 37.7749 and 
-                          float(check_in_data.longitude) == -122.4194)
+        try:
+            # Check if already checked in today
+            today = date.today()
+            existing_attendance = self.db.query(Attendance).filter(
+                Attendance.user_id == user_id,
+                Attendance.product_id == product_id,
+                func.date(Attendance.check_in_time) == today,
+                Attendance.check_out_time == None
+            ).first()
             
-            if not is_mock_gps and not self.validate_location(
-                float(check_in_data.latitude), 
-                float(check_in_data.longitude), 
-                product_id
-            ):
+            if existing_attendance:
                 raise HTTPException(
                     status_code=status.HTTP_400_BAD_REQUEST,
-                    detail="Location is outside office geofence"
+                    detail="Already checked in today"
                 )
-        
-        # Determine attendance status
-        attendance_status = self._determine_attendance_status(user_id, product_id, check_in_data.organizational_unit_id)
-        
-        # Create attendance record
-        location_name = check_in_data.location_name
-        if not location_name and check_in_data.latitude and check_in_data.longitude:
-            location_name = self.reverse_geocode(float(check_in_data.latitude), float(check_in_data.longitude))
-        db_attendance = Attendance(
-            user_id=user_id,
-            product_id=product_id,
-            organizational_unit_id=check_in_data.organizational_unit_id,
-            check_in_time=datetime.utcnow(),
-            check_in_latitude=check_in_data.latitude,
-            check_in_longitude=check_in_data.longitude,
-            location_name=location_name,
-            attendance_status=attendance_status,
-            work_type=check_in_data.work_type,
-            notes=check_in_data.notes
-        )
-        
-        self.db.add(db_attendance)
-        self.db.commit()
-        self.db.refresh(db_attendance)
-        
-        return db_attendance
+            
+            # Validate location if work_type is office
+            if check_in_data.work_type == 'office':
+                # Check if this is mock GPS (skip validation for development)
+                is_mock_gps = (float(check_in_data.latitude) == 14.4426 and 
+                              float(check_in_data.longitude) == 79.9865)
+                
+                if not is_mock_gps and not self.validate_location(
+                    float(check_in_data.latitude), 
+                    float(check_in_data.longitude), 
+                    product_id
+                ):
+                    raise HTTPException(
+                        status_code=status.HTTP_400_BAD_REQUEST,
+                        detail="Location is outside office geofence"
+                    )
+            
+            # Determine attendance status
+            attendance_status = self._determine_attendance_status(user_id, product_id, check_in_data.organizational_unit_id)
+            
+            # Create attendance record
+            location_name = check_in_data.location_name
+            if not location_name and check_in_data.latitude and check_in_data.longitude:
+                location_name = self.reverse_geocode(float(check_in_data.latitude), float(check_in_data.longitude))
+            db_attendance = Attendance(
+                user_id=user_id,
+                product_id=product_id,
+                organizational_unit_id=check_in_data.organizational_unit_id,
+                check_in_time=datetime.utcnow().replace(tzinfo=timezone.utc),
+                check_in_latitude=check_in_data.latitude,
+                check_in_longitude=check_in_data.longitude,
+                location_name=location_name,
+                attendance_status=attendance_status,
+                work_type=check_in_data.work_type,
+                notes=check_in_data.notes
+            )
+            
+            self.db.add(db_attendance)
+            self.db.commit()
+            self.db.refresh(db_attendance)
+            
+            return db_attendance
+            
+        except HTTPException:
+            # Re-raise HTTP exceptions as they are intentional
+            raise
+        except Exception as e:
+            print(f"Error in check_in: {str(e)}")
+            self.db.rollback()
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Failed to check in. Please try again."
+            )
     
     def check_out(self, user_id: int, product_id: str, check_out_data: CheckOutRequest) -> Attendance:
         """Mark attendance check-out"""
-        
-        # Find today's check-in record
-        today = date.today()
-        attendance = self.db.query(Attendance).filter(
-            Attendance.user_id == user_id,
-            Attendance.product_id == product_id,
-            func.date(Attendance.check_in_time) == today,
-            Attendance.check_out_time == None
-        ).first()
-        
-        if not attendance:
+        try:
+            # Find today's check-in record
+            today = date.today()
+            attendance = self.db.query(Attendance).filter(
+                Attendance.user_id == user_id,
+                Attendance.product_id == product_id,
+                func.date(Attendance.check_in_time) == today,
+                Attendance.check_out_time == None
+            ).first()
+            
+            if not attendance:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="No check-in record found for today"
+                )
+            
+            # Update check-out information
+            attendance.check_out_time = datetime.utcnow().replace(tzinfo=timezone.utc)
+            if check_out_data.latitude and check_out_data.longitude:
+                attendance.check_out_latitude = check_out_data.latitude
+                attendance.check_out_longitude = check_out_data.longitude
+                attendance.location_name = self.reverse_geocode(float(check_out_data.latitude), float(check_out_data.longitude))
+            if check_out_data.notes:
+                attendance.notes = check_out_data.notes
+            
+            self.db.commit()
+            self.db.refresh(attendance)
+            
+            return attendance
+            
+        except HTTPException:
+            # Re-raise HTTP exceptions as they are intentional
+            raise
+        except Exception as e:
+            print(f"Error in check_out: {str(e)}")
+            self.db.rollback()
             raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="No check-in record found for today"
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Failed to check out. Please try again."
             )
-        
-        # Update check-out information
-        attendance.check_out_time = datetime.utcnow()
-        if check_out_data.latitude and check_out_data.longitude:
-            attendance.check_out_latitude = check_out_data.latitude
-            attendance.check_out_longitude = check_out_data.longitude
-            attendance.location_name = self.reverse_geocode(float(check_out_data.latitude), float(check_out_data.longitude))
-        if check_out_data.notes:
-            attendance.notes = check_out_data.notes
-        
-        self.db.commit()
-        self.db.refresh(attendance)
-        
-        return attendance
     
     def get_attendance_records(self, user_id: int, product_id: str, start_date: date, end_date: date) -> List[Attendance]:
         """Get attendance records for a user within date range"""

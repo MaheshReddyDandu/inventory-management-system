@@ -153,11 +153,13 @@
         
         <!-- Expand/Collapse All Controls -->
         <div class="expand-collapse-controls">
-          <button class="control-btn" (click)="expandAllSections()">
-            <span>Expand All</span>
+          <button class="control-btn expand-btn" (click)="expandAllSections()">
+            <span class="btn-icon">📂</span>
+            <span class="btn-text">Expand All</span>
           </button>
-          <button class="control-btn" (click)="collapseAllSections()">
-            <span>Collapse All</span>
+          <button class="control-btn collapse-btn" (click)="collapseAllSections()">
+            <span class="btn-icon">📁</span>
+            <span class="btn-text">Collapse All</span>
           </button>
         </div>
       </div>

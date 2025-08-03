@@ -1,9 +1,10 @@
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Tuple
 from sqlalchemy.orm import Session
 from fastapi import HTTPException, status
 from app.models.user import User, Role, RefreshToken, PasswordReset
-from app.schemas.user import UserCreate, UserLogin
+from app.schemas.user import UserCreate, UserLogin, UserAssignmentCreate
+from app.models.organization import UserAssignment
 from app.core.security import get_password_hash, verify_password, create_access_token, create_refresh_token
 from app.core.database import redis_client
 from app.core.config import settings
@@ -80,131 +81,193 @@ class AuthService:
         self.db.add(db_user)
         self.db.commit()
         self.db.refresh(db_user)
+        
+        # Handle organizational assignments if provided
+        if user_data.organizational_assignments:
+            for assignment_data in user_data.organizational_assignments:
+                assignment = UserAssignment(
+                    user_id=db_user.id,
+                    organizational_unit_id=assignment_data.organizational_unit_id,
+                    product_id=user_data.product_id,
+                    role_in_unit=assignment_data.role_in_unit,
+                    is_primary=assignment_data.is_primary,
+                    start_date=assignment_data.start_date,
+                    end_date=assignment_data.end_date,
+                    is_active=True
+                )
+                self.db.add(assignment)
+            
+            self.db.commit()
+        
         # Send verification email
         verification_token = create_refresh_token()
         send_verification_email.delay(db_user.id, verification_token)
         return db_user
 
     def authenticate_user(self, login_data: UserLogin) -> Tuple[User, str, str]:
-        # Find user by email (and product_id if provided)
-        if login_data.product_id:
-            user = self.db.query(User).filter(
-                User.email == login_data.email,
-                User.product_id == login_data.product_id
-            ).first()
-        else:
-            # If no product_id provided, find user by email only
-            user = self.db.query(User).filter(User.email == login_data.email).first()
-        
-        if not user:
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Incorrect email or password"
-            )
-        
-        # Check if user is active
-        if not user.is_active:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Account is deactivated"
-            )
-        
-        # Check if user is locked
-        if user.locked_until and user.locked_until > datetime.utcnow():
-            raise HTTPException(
-                status_code=status.HTTP_423_LOCKED,
-                detail="Account is temporarily locked"
-            )
-        
-        # Verify password
-        if not verify_password(login_data.password, user.hashed_password):
-            # Increment login attempts
-            user.login_attempts += 1
+        try:
+            # Find user by email (and product_id if provided)
+            if login_data.product_id:
+                user = self.db.query(User).filter(
+                    User.email == login_data.email,
+                    User.product_id == login_data.product_id
+                ).first()
+            else:
+                # If no product_id provided, find user by email only
+                user = self.db.query(User).filter(User.email == login_data.email).first()
             
-            # Lock account after 5 failed attempts
-            if user.login_attempts >= 5:
-                user.locked_until = datetime.utcnow() + timedelta(minutes=30)
+            if not user:
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    detail="Incorrect email or password"
+                )
             
+            # Check if user is active
+            if not user.is_active:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Account is deactivated"
+                )
+            
+            # Check if user is locked
+            if user.locked_until:
+                try:
+                    current_time = datetime.utcnow().replace(tzinfo=user.locked_until.tzinfo)
+                    if user.locked_until > current_time:
+                        raise HTTPException(
+                            status_code=status.HTTP_423_LOCKED,
+                            detail="Account is temporarily locked"
+                        )
+                except Exception as e:
+                    # If there's a timezone issue, unlock the account
+                    user.locked_until = None
+                    user.login_attempts = 0
+                    self.db.commit()
+            
+            # Verify password
+            if not verify_password(login_data.password, user.hashed_password):
+                # Increment login attempts
+                user.login_attempts += 1
+                
+                # Lock account after 5 failed attempts
+                if user.login_attempts >= 5:
+                    user.locked_until = datetime.utcnow().replace(tzinfo=timezone.utc) + timedelta(minutes=30)
+                
+                self.db.commit()
+                
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    detail="Incorrect email or password"
+                )
+            
+            # Reset login attempts on successful login
+            user.login_attempts = 0
+            user.locked_until = None
+            user.last_login = datetime.utcnow().replace(tzinfo=timezone.utc)
             self.db.commit()
             
+            # Create tokens
+            access_token = create_access_token(data={"sub": str(user.id)})
+            refresh_token = self._create_refresh_token(user.id, user.product_id)
+            
+            return user, access_token, refresh_token
+            
+        except HTTPException:
+            # Re-raise HTTP exceptions as they are intentional
+            raise
+        except Exception as e:
+            # Log the error and return a generic error
+            print(f"Authentication error: {str(e)}")
+            self.db.rollback()
             raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Incorrect email or password"
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Authentication failed due to server error"
             )
-        
-        # Reset login attempts on successful login
-        user.login_attempts = 0
-        user.locked_until = None
-        user.last_login = datetime.utcnow()
-        self.db.commit()
-        
-        # Create tokens
-        access_token = create_access_token(data={"sub": str(user.id)})
-        refresh_token = self._create_refresh_token(user.id, user.product_id)
-        
-        return user, access_token, refresh_token
 
     def _create_refresh_token(self, user_id: int, product_id: str) -> str:
-        # Clean up old refresh tokens
-        self.db.query(RefreshToken).filter(
-            RefreshToken.user_id == user_id,
-            RefreshToken.expires_at < datetime.utcnow()
-        ).delete()
-        
-        # Create new refresh token
-        refresh_token = create_refresh_token()
-        db_refresh_token = RefreshToken(
-            token=refresh_token,
-            user_id=user_id,
-            product_id=product_id,
-            expires_at=datetime.utcnow() + timedelta(days=7)
-        )
-        
-        self.db.add(db_refresh_token)
-        self.db.commit()
-        
-        return refresh_token
+        try:
+            # Clean up old refresh tokens
+            current_time = datetime.utcnow().replace(tzinfo=timezone.utc)
+            self.db.query(RefreshToken).filter(
+                RefreshToken.user_id == user_id,
+                RefreshToken.expires_at < current_time
+            ).delete()
+            
+            # Create new refresh token
+            refresh_token = create_refresh_token()
+            current_time = datetime.utcnow().replace(tzinfo=timezone.utc)
+            db_refresh_token = RefreshToken(
+                token=refresh_token,
+                user_id=user_id,
+                product_id=product_id,
+                expires_at=current_time + timedelta(days=7)
+            )
+            
+            self.db.add(db_refresh_token)
+            self.db.commit()
+            
+            return refresh_token
+        except Exception as e:
+            print(f"Error creating refresh token: {str(e)}")
+            self.db.rollback()
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Failed to create refresh token"
+            )
 
     def refresh_access_token(self, refresh_token: str) -> Tuple[str, str]:
-        # Verify refresh token
         try:
-            payload = jwt.decode(refresh_token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
-        except JWTError:
+            # Verify refresh token
+            try:
+                payload = jwt.decode(refresh_token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
+            except JWTError:
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    detail="Invalid refresh token"
+                )
+            
+            # Check if refresh token exists and is not revoked
+            current_time = datetime.utcnow().replace(tzinfo=timezone.utc)
+            db_refresh_token = self.db.query(RefreshToken).filter(
+                RefreshToken.token == refresh_token,
+                RefreshToken.is_revoked == False,
+                RefreshToken.expires_at > current_time
+            ).first()
+            
+            if not db_refresh_token:
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    detail="Invalid refresh token"
+                )
+            
+            # Get user
+            user = self.db.query(User).filter(User.id == db_refresh_token.user_id).first()
+            if not user or not user.is_active:
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    detail="User not found or inactive"
+                )
+            
+            # Create new tokens
+            access_token = create_access_token(data={"sub": str(user.id)})
+            new_refresh_token = self._create_refresh_token(user.id, user.product_id)
+            
+            # Revoke old refresh token
+            db_refresh_token.is_revoked = True
+            self.db.commit()
+            
+            return access_token, new_refresh_token
+            
+        except HTTPException:
+            # Re-raise HTTP exceptions as they are intentional
+            raise
+        except Exception as e:
+            print(f"Error refreshing access token: {str(e)}")
+            self.db.rollback()
             raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Invalid refresh token"
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Failed to refresh access token"
             )
-        
-        # Check if refresh token exists and is not revoked
-        db_refresh_token = self.db.query(RefreshToken).filter(
-            RefreshToken.token == refresh_token,
-            RefreshToken.is_revoked == False,
-            RefreshToken.expires_at > datetime.utcnow()
-        ).first()
-        
-        if not db_refresh_token:
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Invalid refresh token"
-            )
-        
-        # Get user
-        user = self.db.query(User).filter(User.id == db_refresh_token.user_id).first()
-        if not user or not user.is_active:
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="User not found or inactive"
-            )
-        
-        # Create new tokens
-        access_token = create_access_token(data={"sub": str(user.id)})
-        new_refresh_token = self._create_refresh_token(user.id, user.product_id)
-        
-        # Revoke old refresh token
-        db_refresh_token.is_revoked = True
-        self.db.commit()
-        
-        return access_token, new_refresh_token
 
     def logout(self, current_user: User, access_token: str, refresh_token: str):
         # Blacklist access token

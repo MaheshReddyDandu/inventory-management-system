@@ -4,9 +4,11 @@ from typing import List
 from app.core.database import get_db
 from app.core.security import get_current_user, require_roles, require_roles_and_product
 from app.models.user import User, Role
+from app.models.organization import OrganizationalUnit, UserAssignment
 from app.schemas.user import (
     UserCreate, UserLogin, UserResponse, TokenResponse,
-    PasswordResetRequest, PasswordResetConfirm, ChangePasswordRequest, RoleResponse
+    PasswordResetRequest, PasswordResetConfirm, ChangePasswordRequest, RoleResponse,
+    UserUpdate, OrganizationalUnitOption, UserAssignmentCreate
 )
 from app.services.auth_service import AuthService
 from app.core.config import settings
@@ -92,12 +94,88 @@ async def get_users(
     current_user: User = Depends(require_roles_and_product(["admin", "manager"])),
     db: Session = Depends(get_db)
 ):
-    # Get users for the current user's product only
+    # Get users for the current user's product only with their assignments
     users = db.query(User).filter(
         User.is_active == True,
         User.product_id == current_user.product_id
     ).all()
+    
+    # Load organizational assignments for each user
+    for user in users:
+        assignments = db.query(UserAssignment).join(OrganizationalUnit).filter(
+            UserAssignment.user_id == user.id,
+            UserAssignment.product_id == current_user.product_id
+        ).all()
+        
+        # Convert to response format
+        user.organizational_assignments = []
+        for assignment in assignments:
+            unit = db.query(OrganizationalUnit).filter(
+                OrganizationalUnit.id == assignment.organizational_unit_id
+            ).first()
+            if unit:
+                user.organizational_assignments.append({
+                    "id": assignment.id,
+                    "organizational_unit_id": assignment.organizational_unit_id,
+                    "organizational_unit_name": unit.name,
+                    "organizational_unit_type": unit.unit_type,
+                    "role_in_unit": assignment.role_in_unit,
+                    "is_primary": assignment.is_primary,
+                    "start_date": assignment.start_date,
+                    "end_date": assignment.end_date,
+                    "is_active": assignment.is_active,
+                    "created_at": assignment.created_at
+                })
+    
     return users 
+
+# --- ORGANIZATIONAL UNIT OPTIONS (Admin only) ---
+
+@router.get("/admin/organizational-units", response_model=List[OrganizationalUnitOption])
+async def get_organizational_units_for_user_creation(
+    current_user: User = Depends(require_roles_and_product(["admin"])),
+    db: Session = Depends(get_db)
+):
+    """Get all organizational units for user assignment dropdowns"""
+    units = db.query(OrganizationalUnit).filter(
+        OrganizationalUnit.product_id == current_user.product_id,
+        OrganizationalUnit.is_active == True
+    ).order_by(OrganizationalUnit.unit_type, OrganizationalUnit.name).all()
+    
+    return [
+        OrganizationalUnitOption(
+            id=unit.id,
+            name=unit.name,
+            unit_type=unit.unit_type,
+            code=unit.code,
+            description=unit.description
+        )
+        for unit in units
+    ]
+
+@router.get("/admin/organizational-units/{unit_type}", response_model=List[OrganizationalUnitOption])
+async def get_organizational_units_by_type(
+    unit_type: str,
+    current_user: User = Depends(require_roles_and_product(["admin"])),
+    db: Session = Depends(get_db)
+):
+    """Get organizational units by type (branch, client, department, project)"""
+    units = db.query(OrganizationalUnit).filter(
+        OrganizationalUnit.product_id == current_user.product_id,
+        OrganizationalUnit.unit_type == unit_type,
+        OrganizationalUnit.is_active == True
+    ).order_by(OrganizationalUnit.name).all()
+    
+    return [
+        OrganizationalUnitOption(
+            id=unit.id,
+            name=unit.name,
+            unit_type=unit.unit_type,
+            code=unit.code,
+            description=unit.description
+        )
+        for unit in units
+    ]
 
 # --- USER CRUD (Admin only) ---
 
@@ -110,6 +188,7 @@ class UserUpdate(BaseModel):
     is_active: Optional[bool] = None
     is_verified: Optional[bool] = None
     product_id: Optional[str] = None
+    organizational_assignments: Optional[List[UserAssignmentCreate]] = None
 
 @router.post("/admin/users", response_model=UserResponse)
 async def admin_create_user(
@@ -121,6 +200,32 @@ async def admin_create_user(
     user_data.product_id = current_user.product_id
     auth_service = AuthService(db)
     user = auth_service.create_user(user_data)
+    
+    # Load organizational assignments for response
+    assignments = db.query(UserAssignment).join(OrganizationalUnit).filter(
+        UserAssignment.user_id == user.id,
+        UserAssignment.product_id == current_user.product_id
+    ).all()
+    
+    user.organizational_assignments = []
+    for assignment in assignments:
+        unit = db.query(OrganizationalUnit).filter(
+            OrganizationalUnit.id == assignment.organizational_unit_id
+        ).first()
+        if unit:
+            user.organizational_assignments.append({
+                "id": assignment.id,
+                "organizational_unit_id": assignment.organizational_unit_id,
+                "organizational_unit_name": unit.name,
+                "organizational_unit_type": unit.unit_type,
+                "role_in_unit": assignment.role_in_unit,
+                "is_primary": assignment.is_primary,
+                "start_date": assignment.start_date,
+                "end_date": assignment.end_date,
+                "is_active": assignment.is_active,
+                "created_at": assignment.created_at
+            })
+    
     return user
 
 @router.put("/admin/users/{user_id}", response_model=UserResponse)
@@ -137,6 +242,8 @@ async def admin_update_user(
     ).first()
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
+    
+    # Update basic user fields
     if user_update.email:
         user.email = user_update.email
     if user_update.first_name:
@@ -154,8 +261,57 @@ async def admin_update_user(
         user.is_verified = user_update.is_verified
     if user_update.product_id:
         user.product_id = user_update.product_id
+    
+    # Handle organizational assignments if provided
+    if user_update.organizational_assignments is not None:
+        # Remove existing assignments
+        db.query(UserAssignment).filter(
+            UserAssignment.user_id == user_id,
+            UserAssignment.product_id == current_user.product_id
+        ).delete()
+        
+        # Add new assignments
+        for assignment_data in user_update.organizational_assignments:
+            assignment = UserAssignment(
+                user_id=user_id,
+                organizational_unit_id=assignment_data.organizational_unit_id,
+                product_id=current_user.product_id,
+                role_in_unit=assignment_data.role_in_unit,
+                is_primary=assignment_data.is_primary,
+                start_date=assignment_data.start_date,
+                end_date=assignment_data.end_date,
+                is_active=True
+            )
+            db.add(assignment)
+    
     db.commit()
     db.refresh(user)
+    
+    # Load organizational assignments for response
+    assignments = db.query(UserAssignment).join(OrganizationalUnit).filter(
+        UserAssignment.user_id == user.id,
+        UserAssignment.product_id == current_user.product_id
+    ).all()
+    
+    user.organizational_assignments = []
+    for assignment in assignments:
+        unit = db.query(OrganizationalUnit).filter(
+            OrganizationalUnit.id == assignment.organizational_unit_id
+        ).first()
+        if unit:
+            user.organizational_assignments.append({
+                "id": assignment.id,
+                "organizational_unit_id": assignment.organizational_unit_id,
+                "organizational_unit_name": unit.name,
+                "organizational_unit_type": unit.unit_type,
+                "role_in_unit": assignment.role_in_unit,
+                "is_primary": assignment.is_primary,
+                "start_date": assignment.start_date,
+                "end_date": assignment.end_date,
+                "is_active": assignment.is_active,
+                "created_at": assignment.created_at
+            })
+    
     return user
 
 @router.delete("/admin/users/{user_id}")

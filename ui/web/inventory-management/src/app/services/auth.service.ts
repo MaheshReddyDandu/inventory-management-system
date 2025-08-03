@@ -16,6 +16,7 @@ export interface User {
   role: Role;
   created_at: string;
   last_login: string | null;
+  organizational_assignments?: any[];
 }
 
 export interface Role {

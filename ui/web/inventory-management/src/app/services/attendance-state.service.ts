@@ -42,11 +42,33 @@ export class AttendanceStateService {
     private organizationService: OrganizationService,
     private authService: AuthService
   ) {
+    // Check if user is already logged in
+    const currentUser = this.authService.getCurrentUserValue();
+    if (currentUser) {
+      this.refreshAttendanceState();
+      this.startAutoRefresh();
+    }
+    
     // Auto-refresh every 30 seconds when user is logged in
     this.authService.currentUser$.subscribe(user => {
       if (user) {
         this.refreshAttendanceState();
         this.startAutoRefresh();
+      } else {
+        // Reset state when user logs out
+        this.updateState({
+          currentSession: null,
+          todaySessions: null,
+          allSessions: [],
+          isCheckedIn: false,
+          totalHoursToday: '0h 0m',
+          isLoading: false,
+          isLoadingMore: false,
+          hasMoreData: true,
+          currentPage: 1,
+          error: null,
+          lastUpdate: new Date()
+        });
       }
     });
   }
@@ -80,8 +102,9 @@ export class AttendanceStateService {
     }
 
     // Fetch records for the past 2 weeks initially (14 days)
-    const endDate = new Date().toISOString().split('T')[0];
-    const startDate = new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+    const today = new Date();
+    const endDate = today.toISOString().split('T')[0];
+    const startDate = new Date(today.getTime() - 14 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
     
     return this.organizationService.getAttendanceRecords(currentUser.id, startDate, endDate, 1, 50)
       .pipe(
@@ -126,8 +149,9 @@ export class AttendanceStateService {
     
     // Calculate date range for the next page (going further back in time)
     const weeksBack = nextPage; // Each page goes back more weeks
-    const endDate = new Date(Date.now() - (weeksBack - 1) * 14 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
-    const startDate = new Date(Date.now() - weeksBack * 14 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+    const today = new Date();
+    const endDate = new Date(today.getTime() - (weeksBack - 1) * 14 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+    const startDate = new Date(today.getTime() - weeksBack * 14 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
     
     return this.organizationService.getAttendanceRecords(currentUser.id, startDate, endDate, 1, 50)
       .pipe(
@@ -135,11 +159,13 @@ export class AttendanceStateService {
           const currentState = this.attendanceState.value;
           const allSessions = [...currentState.allSessions, ...newSessions];
           
-          // Separate today's sessions from all sessions
-          const today = new Date().toISOString().split('T')[0];
+          // Separate today's sessions from all sessions using UTC date comparison
+          const todayDate = new Date();
+          const todayDateString = todayDate.toISOString().split('T')[0];
           const todaySessions = allSessions.filter(s => {
-            const sessionDate = new Date(s.check_in_time).toISOString().split('T')[0];
-            return sessionDate === today;
+            const sessionDate = new Date(s.check_in_time);
+            const sessionDateString = sessionDate.toISOString().split('T')[0];
+            return sessionDateString === todayDateString;
           });
 
           const currentSession = todaySessions.find(s => s.check_in_time && !s.check_out_time) || null;
@@ -169,11 +195,15 @@ export class AttendanceStateService {
   }
 
   private processAttendanceSessions(sessions: Attendance[]): void {
-    // Separate today's sessions from all sessions
-    const today = new Date().toISOString().split('T')[0];
+    // Separate today's sessions from all sessions using UTC date comparison
+    const todayDate = new Date();
+    const todayDateString = todayDate.toISOString().split('T')[0];
+    
     const todaySessions = sessions.filter(s => {
-      const sessionDate = new Date(s.check_in_time).toISOString().split('T')[0];
-      return sessionDate === today;
+      // Use UTC date comparison to handle timezone correctly
+      const sessionDate = new Date(s.check_in_time);
+      const sessionDateString = sessionDate.toISOString().split('T')[0];
+      return sessionDateString === todayDateString;
     });
 
     const currentSession = todaySessions.find(s => s.check_in_time && !s.check_out_time) || null;
@@ -210,5 +240,18 @@ export class AttendanceStateService {
 
   getCurrentState(): AttendanceState {
     return this.attendanceState.value;
+  }
+
+  // Manual refresh method that can be called from components
+  manualRefresh(): void {
+    this.refreshAttendanceState().subscribe();
+  }
+
+  // Force refresh method that can be called when component loads
+  forceRefresh(): void {
+    const currentUser = this.authService.getCurrentUserValue();
+    if (currentUser) {
+      this.refreshAttendanceState(true).subscribe();
+    }
   }
 }

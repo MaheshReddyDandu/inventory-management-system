@@ -34,13 +34,15 @@
     </div>
     
     <div class="user-actions">
-      <button class="action-btn secondary" (click)="goToChangePassword()">
-        <span class="action-icon">🔑</span>
-        <span>Change Password</span>
-      </button>
-      <button class="action-btn danger" (click)="logout()">
-        <span class="action-icon">🚪</span>
-        <span>Logout</span>
+      <button class="action-btn profile" (click)="openProfile()">
+        <div class="profile-avatar">
+          {{ currentUser?.first_name?.charAt(0) }}{{ currentUser?.last_name?.charAt(0) }}
+        </div>
+        <div class="profile-info">
+          <span class="profile-name">{{ currentUser?.first_name }} {{ currentUser?.last_name }}</span>
+          <span class="profile-role">{{ getUserRoleName() | titlecase }}</span>
+        </div>
+        <span class="action-icon">👤</span>
       </button>
     </div>
   </div>
@@ -335,4 +337,13 @@
       <p>Loading dashboard data...</p>
     </div>
   </div>
+
+  <!-- Profile Overlay -->
+  <app-profile-overlay
+    [isOpen]="isProfileOpen"
+    [currentUser]="currentUser"
+    (closeOverlay)="closeProfile()"
+    (logoutRequested)="onLogoutRequested()"
+    (changePasswordRequested)="onChangePasswordRequested()">
+  </app-profile-overlay>
 </div> 

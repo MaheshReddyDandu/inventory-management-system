@@ -26,8 +26,8 @@ def add_mock_office():
             product_id="your-product-id",  # You'll need to replace this with actual product_id
             name="Mock Development Office",
             address="San Francisco, CA (Mock Location)",
-            latitude=37.7749,
-            longitude=-122.4194,
+            latitude=14.4426,
+            longitude=79.9865,
             radius_meters=1000,  # 1km radius
             is_active=True
         )

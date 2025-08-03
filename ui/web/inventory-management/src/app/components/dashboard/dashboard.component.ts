@@ -7,6 +7,7 @@ import { AttendanceStateService, AttendanceState } from '../../services/attendan
 import { Router } from '@angular/router';
 import { Subscription } from 'rxjs';
 import { ModernIconComponent, IconType } from '../shared/modern-icon.component';
+import { ProfileOverlayComponent } from '../shared/profile-overlay.component';
 
 interface DashboardStats {
   totalUsers: number;
@@ -30,7 +31,7 @@ interface QuickAction {
 @Component({
   selector: 'app-dashboard',
   standalone: true,
-  imports: [CommonModule, RouterModule, ModernIconComponent],
+  imports: [CommonModule, RouterModule, ModernIconComponent, ProfileOverlayComponent],
   templateUrl: './dashboard.component.html',
   styleUrls: ['./dashboard.component.scss']
 })
@@ -41,6 +42,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
   currentDate: string = '';
   timeZone: string = '';
   attendanceState: AttendanceState | null = null;
+  isProfileOpen: boolean = false;
   private subscription = new Subscription();
   private clockInterval: any;
   
@@ -394,5 +396,22 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
   getUserRoleClass(): string {
     return this.currentUser?.role?.name || 'user';
+  }
+
+  // Profile Overlay Methods
+  openProfile(): void {
+    this.isProfileOpen = true;
+  }
+
+  closeProfile(): void {
+    this.isProfileOpen = false;
+  }
+
+  onLogoutRequested(): void {
+    this.logout();
+  }
+
+  onChangePasswordRequested(): void {
+    this.goToChangePassword();
   }
 } 

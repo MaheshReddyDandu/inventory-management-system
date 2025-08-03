@@ -105,9 +105,8 @@ export interface CheckInRequest {
 }
 
 export interface CheckOutRequest {
-  attendance_id: number;
-  work_summary?: string;
   notes?: string;
+  work_summary?: string;
   latitude?: number;
   longitude?: number;
 }
@@ -355,8 +354,8 @@ export class OrganizationService {
     return new Promise((resolve, reject) => {
       // Mock GPS coordinates for development (when GPS is not working)
       const mockLocation = {
-        latitude: 37.7749,  // San Francisco coordinates as example
-        longitude: -122.4194
+        latitude: 14.4426,  // San Francisco coordinates as example
+        longitude: 79.9865
       };
       
       if (!navigator.geolocation) {

@@ -1,51 +1,427 @@
 <div class="admin-user-management-container">
-  <h2>User Management</h2>
-
-  <div *ngIf="error" class="error-message">{{ error }}</div>
-  <div *ngIf="success" class="success-message">{{ success }}</div>
-
-  <form [formGroup]="userForm" (ngSubmit)="submit()" class="user-form">
-    <div class="form-row">
-      <input formControlName="email" placeholder="Email" type="email" />
-      <input formControlName="first_name" placeholder="First Name" />
-      <input formControlName="last_name" placeholder="Last Name" />
-      <input formControlName="password" placeholder="Password" type="password" *ngIf="!editingUser" />
-      <select formControlName="role_id">
-        <option value="" disabled>Select Role</option>
-        <option *ngFor="let role of roles" [value]="role.id">{{ role.name }}</option>
-      </select>
-      <label><input type="checkbox" formControlName="is_active" /> Active</label>
-      <label><input type="checkbox" formControlName="is_verified" /> Verified</label>
+  <!-- Header Section -->
+  <div class="header-section">
+    <div class="header-content">
+      <h1 class="page-title">
+        <span class="title-icon">👥</span>
+        User Management
+      </h1>
+      <p class="page-subtitle">Create and manage users with organizational assignments</p>
     </div>
-    <div class="form-actions">
-      <button type="submit" [disabled]="userForm.invalid || loading">{{ editingUser ? 'Update' : 'Create' }} User</button>
-      <button type="button" (click)="cancelEdit()" *ngIf="editingUser">Cancel</button>
+    
+    <div class="header-actions">
+      <button 
+        class="btn btn-secondary"
+        (click)="clearMessages()"
+        *ngIf="error || success">
+        <span class="btn-icon">🔄</span>
+        Clear Messages
+      </button>
     </div>
-  </form>
+  </div>
 
-  <table class="user-table">
-    <thead>
-      <tr>
-        <th>Email</th>
-        <th>Name</th>
-        <th>Role</th>
-        <th>Active</th>
-        <th>Verified</th>
-        <th>Actions</th>
-      </tr>
-    </thead>
-    <tbody>
-      <tr *ngFor="let user of users">
-        <td>{{ user.email }}</td>
-        <td>{{ user.first_name }} {{ user.last_name }}</td>
-        <td>{{ user.role.name }}</td>
-        <td>{{ user.is_active ? 'Yes' : 'No' }}</td>
-        <td>{{ user.is_verified ? 'Yes' : 'No' }}</td>
-        <td>
-          <button (click)="startEdit(user)">Edit</button>
-          <button (click)="deleteUser(user)">Delete</button>
-        </td>
-      </tr>
-    </tbody>
-  </table>
+  <!-- Alert Messages -->
+  <div class="alert-container" *ngIf="error || success">
+    <div class="alert alert-success" *ngIf="success">
+      <span class="alert-icon">✅</span>
+      <span class="alert-message">{{ success }}</span>
+      <button class="alert-close" (click)="clearMessages()">×</button>
+    </div>
+    
+    <div class="alert alert-error" *ngIf="error">
+      <span class="alert-icon">❌</span>
+      <span class="alert-message">{{ error }}</span>
+      <button class="alert-close" (click)="clearMessages()">×</button>
+    </div>
+  </div>
+
+  <!-- User Creation/Edit Form -->
+  <div class="form-section">
+    <div class="form-header">
+      <h2 class="form-title">
+        <span class="form-icon">{{ editingUser ? '✏️' : '➕' }}</span>
+        {{ editingUser ? 'Edit User' : 'Create New User' }}
+      </h2>
+      <button 
+        class="btn btn-text"
+        (click)="cancelEdit()"
+        *ngIf="editingUser">
+        Cancel Edit
+      </button>
+    </div>
+
+    <form [formGroup]="userForm" (ngSubmit)="submit()" class="user-form">
+      <!-- Basic Information -->
+      <div class="form-section-card">
+        <h3 class="section-title">Basic Information</h3>
+        <div class="form-grid">
+          <div class="form-group">
+            <label for="email" class="form-label">
+              Email Address <span class="required">*</span>
+            </label>
+            <input 
+              id="email"
+              type="email" 
+              formControlName="email" 
+              class="form-input"
+              [class.error]="isFieldInvalid(userForm, 'email')"
+              placeholder="user@example.com" />
+            <div class="error-message" *ngIf="isFieldInvalid(userForm, 'email')">
+              {{ getFieldError(userForm, 'email') }}
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="first_name" class="form-label">
+              First Name <span class="required">*</span>
+            </label>
+            <input 
+              id="first_name"
+              type="text" 
+              formControlName="first_name" 
+              class="form-input"
+              [class.error]="isFieldInvalid(userForm, 'first_name')"
+              placeholder="John" />
+            <div class="error-message" *ngIf="isFieldInvalid(userForm, 'first_name')">
+              {{ getFieldError(userForm, 'first_name') }}
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="last_name" class="form-label">
+              Last Name <span class="required">*</span>
+            </label>
+            <input 
+              id="last_name"
+              type="text" 
+              formControlName="last_name" 
+              class="form-input"
+              [class.error]="isFieldInvalid(userForm, 'last_name')"
+              placeholder="Doe" />
+            <div class="error-message" *ngIf="isFieldInvalid(userForm, 'last_name')">
+              {{ getFieldError(userForm, 'last_name') }}
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="password" class="form-label">
+              Password <span class="required" *ngIf="!editingUser">*</span>
+            </label>
+            <input 
+              id="password"
+              type="password" 
+              formControlName="password" 
+              class="form-input"
+              [class.error]="isFieldInvalid(userForm, 'password')"
+              [placeholder]="editingUser ? 'Leave blank to keep current password' : 'Enter password'" />
+            <div class="error-message" *ngIf="isFieldInvalid(userForm, 'password')">
+              {{ getFieldError(userForm, 'password') }}
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="role_id" class="form-label">
+              System Role <span class="required">*</span>
+            </label>
+            <select 
+              id="role_id"
+              formControlName="role_id" 
+              class="form-select"
+              [class.error]="isFieldInvalid(userForm, 'role_id')">
+              <option value="">Select a role</option>
+              <option *ngFor="let role of roles" [value]="role.id">
+                {{ role.name }}
+              </option>
+            </select>
+            <div class="error-message" *ngIf="isFieldInvalid(userForm, 'role_id')">
+              {{ getFieldError(userForm, 'role_id') }}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Advanced Options -->
+      <div class="form-section-card">
+        <div class="section-header">
+          <h3 class="section-title">Advanced Options</h3>
+          <button 
+            type="button"
+            class="btn btn-text"
+            (click)="toggleAdvancedOptions()">
+            <span class="btn-icon">{{ showAdvancedOptions ? '🔽' : '▶️' }}</span>
+            {{ showAdvancedOptions ? 'Hide' : 'Show' }} Advanced
+          </button>
+        </div>
+
+        <div class="advanced-options" *ngIf="showAdvancedOptions">
+          <div class="form-grid">
+            <div class="form-group checkbox-group">
+              <label class="checkbox-label">
+                <input type="checkbox" formControlName="is_active" />
+                <span class="checkmark"></span>
+                Active User
+              </label>
+              <p class="help-text">Inactive users cannot log in to the system</p>
+            </div>
+
+            <div class="form-group checkbox-group">
+              <label class="checkbox-label">
+                <input type="checkbox" formControlName="is_verified" />
+                <span class="checkmark"></span>
+                Email Verified
+              </label>
+              <p class="help-text">Mark user's email as verified</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Organizational Assignments -->
+      <div class="form-section-card">
+        <div class="section-header">
+          <h3 class="section-title">
+            <span class="section-icon">🏢</span>
+            Organizational Assignments
+          </h3>
+          <button 
+            type="button"
+            class="btn btn-primary btn-sm"
+            (click)="addOrganizationalAssignment()">
+            <span class="btn-icon">➕</span>
+            Add Assignment
+          </button>
+        </div>
+
+        <div class="assignments-container" *ngIf="organizationalAssignments.length > 0; else noAssignments">
+          <ng-container *ngFor="let assignment of organizationalAssignments.controls; let i = index">
+            <div 
+              class="assignment-card" 
+              *ngIf="getAssignmentFormGroup(i)"
+              [formGroup]="getAssignmentFormGroup(i)!">
+            
+            <div class="assignment-header">
+              <h4 class="assignment-title">Assignment {{ i + 1 }}</h4>
+              <button 
+                type="button"
+                class="btn btn-danger btn-sm"
+                (click)="removeOrganizationalAssignment(i)">
+                <span class="btn-icon">🗑️</span>
+                Remove
+              </button>
+            </div>
+
+            <div class="assignment-form">
+              <div class="form-grid">
+                <div class="form-group">
+                  <label class="form-label">
+                    Organizational Unit <span class="required">*</span>
+                  </label>
+                  <select 
+                    formControlName="organizational_unit_id" 
+                    class="form-select"
+                    [class.error]="isAssignmentFieldInvalid(i, 'organizational_unit_id')">
+                    <option value="">Select unit</option>
+                    <optgroup *ngFor="let unitType of unitTypes" [label]="unitType.label">
+                      <option 
+                        *ngFor="let unit of getUnitsByType(unitType.value)" 
+                        [value]="unit.id">
+                        {{ unit.name }} ({{ unit.code }})
+                      </option>
+                    </optgroup>
+                  </select>
+                  <div class="error-message" *ngIf="isAssignmentFieldInvalid(i, 'organizational_unit_id')">
+                    Please select an organizational unit
+                  </div>
+                </div>
+
+                <div class="form-group">
+                  <label class="form-label">
+                    Role in Unit <span class="required">*</span>
+                  </label>
+                  <select 
+                    formControlName="role_in_unit" 
+                    class="form-select"
+                    [class.error]="isAssignmentFieldInvalid(i, 'role_in_unit')">
+                    <option *ngFor="let role of roleInUnitOptions" [value]="role.value">
+                      {{ role.label }}
+                    </option>
+                  </select>
+                  <div class="error-message" *ngIf="isAssignmentFieldInvalid(i, 'role_in_unit')">
+                    Please select a role
+                  </div>
+                </div>
+
+                <div class="form-group checkbox-group">
+                  <label class="checkbox-label">
+                    <input type="checkbox" formControlName="is_primary" />
+                    <span class="checkmark"></span>
+                    Primary Assignment
+                  </label>
+                  <p class="help-text">This will be the user's main organizational unit</p>
+                </div>
+              </div>
+
+              <div class="form-grid">
+                <div class="form-group">
+                  <label class="form-label">Start Date</label>
+                  <input 
+                    type="date" 
+                    formControlName="start_date" 
+                    class="form-input" />
+                </div>
+
+                <div class="form-group">
+                  <label class="form-label">End Date</label>
+                  <input 
+                    type="date" 
+                    formControlName="end_date" 
+                    class="form-input" />
+                </div>
+              </div>
+            </div>
+          </div>
+          </ng-container>
+        </div>
+
+        <ng-template #noAssignments>
+          <div class="no-assignments">
+            <div class="no-assignments-icon">🏢</div>
+            <p class="no-assignments-text">No organizational assignments added yet</p>
+            <p class="no-assignments-help">Click "Add Assignment" to assign this user to organizational units</p>
+          </div>
+        </ng-template>
+      </div>
+
+      <!-- Form Actions -->
+      <div class="form-actions">
+        <button 
+          type="submit" 
+          class="btn btn-primary"
+          [disabled]="userForm.invalid || loading">
+          <span class="btn-icon" *ngIf="loading">⏳</span>
+          <span class="btn-icon" *ngIf="!loading">{{ editingUser ? '💾' : '➕' }}</span>
+          {{ loading ? 'Processing...' : (editingUser ? 'Update User' : 'Create User') }}
+        </button>
+        
+        <button 
+          type="button"
+          class="btn btn-secondary"
+          (click)="cancelEdit()"
+          *ngIf="editingUser">
+          Cancel
+        </button>
+      </div>
+    </form>
+  </div>
+
+  <!-- Users Table -->
+  <div class="table-section">
+    <div class="table-header">
+      <h2 class="table-title">
+        <span class="table-icon">📋</span>
+        Users ({{ users.length }})
+      </h2>
+      
+      <div class="table-actions">
+        <button 
+          class="btn btn-secondary"
+          (click)="loadUsers()"
+          [disabled]="loading">
+          <span class="btn-icon">🔄</span>
+          Refresh
+        </button>
+      </div>
+    </div>
+
+    <div class="table-container" *ngIf="!loading; else loadingTable">
+      <table class="users-table" *ngIf="users.length > 0; else noUsers">
+        <thead>
+          <tr>
+            <th>User</th>
+            <th>Role</th>
+            <th>Organizational Units</th>
+            <th>Status</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let user of users" class="user-row">
+            <td class="user-info">
+              <div class="user-avatar">
+                {{ user.first_name.charAt(0) }}{{ user.last_name.charAt(0) }}
+              </div>
+              <div class="user-details">
+                <div class="user-name">{{ user.first_name }} {{ user.last_name }}</div>
+                <div class="user-email">{{ user.email }}</div>
+              </div>
+            </td>
+            
+            <td class="user-role">
+              <span class="role-badge" [class]="'role-' + user.role.name.toLowerCase()">
+                {{ user.role.name }}
+              </span>
+            </td>
+            
+            <td class="user-assignments">
+              <div class="assignments-list" *ngIf="user.organizational_assignments && user.organizational_assignments.length > 0; else noAssignments">
+                <div 
+                  class="assignment-badge" 
+                  *ngFor="let assignment of user.organizational_assignments"
+                  [class.primary]="assignment.is_primary">
+                  <span class="assignment-type">{{ getUnitTypeLabel(assignment.organizational_unit_type) }}</span>
+                  <span class="assignment-name">{{ assignment.organizational_unit_name }}</span>
+                  <span class="assignment-role">{{ getRoleInUnitLabel(assignment.role_in_unit) }}</span>
+                </div>
+              </div>
+              <ng-template #noAssignments>
+                <span class="no-assignments-text">No assignments</span>
+              </ng-template>
+            </td>
+            
+            <td class="user-status">
+              <div class="status-indicators">
+                <span class="status-badge" [class]="user.is_active ? 'status-active' : 'status-inactive'">
+                  {{ user.is_active ? 'Active' : 'Inactive' }}
+                </span>
+                <span class="status-badge" [class]="user.is_verified ? 'status-verified' : 'status-unverified'">
+                  {{ user.is_verified ? 'Verified' : 'Unverified' }}
+                </span>
+              </div>
+            </td>
+            
+            <td class="user-actions">
+              <button 
+                class="btn btn-sm btn-secondary"
+                (click)="startEdit(user)"
+                title="Edit User">
+                <span class="btn-icon">✏️</span>
+              </button>
+              
+              <button 
+                class="btn btn-sm btn-danger"
+                (click)="deleteUser(user)"
+                title="Delete User">
+                <span class="btn-icon">🗑️</span>
+              </button>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+
+      <ng-template #noUsers>
+        <div class="no-users">
+          <div class="no-users-icon">👥</div>
+          <h3 class="no-users-title">No Users Found</h3>
+          <p class="no-users-text">Create your first user to get started</p>
+        </div>
+      </ng-template>
+    </div>
+
+    <ng-template #loadingTable>
+      <div class="loading-container">
+        <div class="loading-spinner"></div>
+        <p class="loading-text">Loading users...</p>
+      </div>
+    </ng-template>
+  </div>
 </div> 
