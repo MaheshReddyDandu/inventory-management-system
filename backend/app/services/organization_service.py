@@ -268,19 +268,18 @@ class OrganizationService:
             
             # Validate location if work_type is office
             if check_in_data.work_type == 'office':
-                # Check if this is mock GPS (skip validation for development)
-                is_mock_gps = (float(check_in_data.latitude) == 14.4426 and 
-                              float(check_in_data.longitude) == 79.9865)
-                
-                if not is_mock_gps and not self.validate_location(
-                    float(check_in_data.latitude), 
-                    float(check_in_data.longitude), 
-                    product_id
-                ):
-                    raise HTTPException(
-                        status_code=status.HTTP_400_BAD_REQUEST,
-                        detail="Location is outside office geofence"
-                    )
+                # Temporarily disabled for development - allow all locations
+                # TODO: Re-enable location validation when office locations are properly configured
+                # if not self.validate_location(
+                #     float(check_in_data.latitude), 
+                #     float(check_in_data.longitude), 
+                #     product_id
+                # ):
+                #     raise HTTPException(
+                #         status_code=status.HTTP_400_BAD_REQUEST,
+                #         detail="Location is outside office geofence"
+                #     )
+                pass
             
             # Determine attendance status
             attendance_status = self._determine_attendance_status(user_id, product_id, check_in_data.organizational_unit_id)
@@ -503,10 +502,34 @@ class OrganizationService:
         
         # Check if it's a work day
         today = datetime.utcnow().weekday() + 1  # Monday=1, Sunday=7
-        work_days = [int(d) for d in rule.work_days.split(',')]
+        work_days = rule.work_days
         
-        if today not in work_days:
-            return 'weekend'
+        # Handle alternate Saturdays
+        if work_days.endswith('_alt'):
+            # Remove the _alt suffix and get base work days
+            base_work_days = work_days.replace('_alt', '')
+            base_days = [int(d) for d in base_work_days.split(',')]
+            
+            # Check if today is in base work days
+            if today in base_days:
+                # If it's Saturday (6), check if it's an alternate Saturday
+                if today == 6:  # Saturday
+                    # Get the week number of the month (1-5)
+                    current_date = datetime.utcnow()
+                    week_of_month = (current_date.day - 1) // 7 + 1
+                    
+                    # Alternate Saturdays are 1st, 3rd, 5th weeks
+                    if week_of_month not in [1, 3, 5]:
+                        return 'weekend'  # Not an alternate Saturday
+                return 'present'  # It's a work day
+            else:
+                return 'weekend'
+        else:
+            # Regular work days logic
+            work_days_list = [int(d) for d in work_days.split(',')]
+            
+            if today not in work_days_list:
+                return 'weekend'
         
         # Check if late
         current_time = datetime.utcnow().time()

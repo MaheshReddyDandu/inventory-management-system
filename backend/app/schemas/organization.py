@@ -118,7 +118,7 @@ class AttendanceRuleBase(BaseModel):
     organizational_unit_id: Optional[int] = None
 
 class AttendanceRuleCreate(AttendanceRuleBase):
-    product_id: str
+    product_id: Optional[str] = None  # Made optional since backend sets it from user context
     
     @validator('start_time', 'end_time')
     def validate_time_format(cls, v):

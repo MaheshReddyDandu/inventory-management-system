@@ -181,7 +181,12 @@ async def create_attendance_rule(
 ):
     """Create attendance rule"""
     from app.models.organization import AttendanceRule
-    db_rule = AttendanceRule(**rule_data.dict())
+    
+    # Set product_id from current user context
+    rule_dict = rule_data.dict()
+    rule_dict['product_id'] = current_user.product_id
+    
+    db_rule = AttendanceRule(**rule_dict)
     db.add(db_rule)
     db.commit()
     db.refresh(db_rule)

@@ -166,26 +166,16 @@ export class AttendanceCheckComponent implements OnInit, OnDestroy {
   getCurrentLocation(): void {
     this.isLocationLoading = true;
     this.organizationService.getCurrentLocation()
-      .then((location) => {
+      .then(location => {
         this.currentLocation = location;
-        this.isLocationLoading = false;
-        
-        // Check if this is mock GPS (San Francisco coordinates)
-        const isMockGPS = location.latitude === 14.4426 && location.longitude === 79.9865;
-        const locationLabel = isMockGPS ? 'Mock GPS Location' : 'Current Location';
         
         // Set location in forms
         this.checkInForm.patchValue({
-          location_name: `${locationLabel}: ${location.latitude.toFixed(6)}, ${location.longitude.toFixed(6)}`
+          location_name: `Current Location: ${location.latitude.toFixed(6)}, ${location.longitude.toFixed(6)}`
         });
         
         // Get address from coordinates if possible
         this.getAddressFromCoordinates(location.latitude, location.longitude);
-        
-        // Show warning if using mock GPS
-        if (isMockGPS) {
-          console.warn('Using mock GPS coordinates for development');
-        }
       })
       .catch((error) => {
         this.errorMessage = `Location access failed: ${error.message}`;

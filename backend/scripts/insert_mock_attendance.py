@@ -28,28 +28,28 @@ SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 LOCATIONS = [
     {
         "name": "Market Street, Hayes Valley, San Francisco, California, 94102, United States",
-        "lat": Decimal("14.4426"),
-        "lng": Decimal("79.9865")
+        "lat": Decimal("37.7749"),
+        "lng": Decimal("-122.4194")
     },
     {
         "name": "Financial District, San Francisco, California, 94111, United States", 
-        "lat": Decimal("37.794500"),
-        "lng": Decimal("-122.399800")
+        "lat": Decimal("37.7945"),
+        "lng": Decimal("-122.3998")
     },
     {
         "name": "Mission District, San Francisco, California, 94110, United States",
-        "lat": Decimal("37.759900"),
-        "lng": Decimal("-122.414300")
+        "lat": Decimal("37.7599"),
+        "lng": Decimal("-122.4143")
     },
     {
         "name": "Home Office - Remote Work",
-        "lat": Decimal("37.784400"),
-        "lng": Decimal("-122.408900")
+        "lat": Decimal("37.7844"),
+        "lng": Decimal("-122.4089")
     },
     {
         "name": "Client Site - Tech Company, SOMA, San Francisco, CA",
-        "lat": Decimal("37.781300"),
-        "lng": Decimal("-122.403500")
+        "lat": Decimal("37.7813"),
+        "lng": Decimal("-122.4035")
     }
 ]
 

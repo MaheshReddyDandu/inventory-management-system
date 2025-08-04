@@ -67,14 +67,39 @@ export interface AttendanceRule {
   id: number;
   product_id: string;
   organizational_unit_id?: number;
-  name: string;
+  rule_name: string;  // Changed from 'name' to 'rule_name' to match backend
+  start_time: string;  // Moved from nested parameters to root level
+  end_time: string;    // Moved from nested parameters to root level
+  late_threshold_minutes: number;  // Moved from nested parameters to root level
+  half_day_threshold_hours: number;  // Added to match backend
+  work_days: string;  // Added to match backend (comma-separated day numbers)
+  is_active: boolean;
+  created_at: string;
+  updated_at?: string;
+}
+
+// Interface for creating/updating attendance rules (matches backend schema)
+export interface AttendanceRuleCreate {
+  rule_name: string;
   start_time: string;
   end_time: string;
-  break_start_time?: string;
-  break_end_time?: string;
-  work_days: string; // comma-separated day numbers
   late_threshold_minutes: number;
+  half_day_threshold_hours: number;
+  work_days: string;
+  organizational_unit_id?: number;
+  product_id?: string;  // Made optional since backend sets it from user context
   is_active: boolean;
+}
+
+export interface AttendanceRuleUpdate {
+  rule_name?: string;
+  start_time?: string;
+  end_time?: string;
+  late_threshold_minutes?: number;
+  half_day_threshold_hours?: number;
+  work_days?: string;
+  organizational_unit_id?: number;
+  is_active?: boolean;
 }
 
 export interface Attendance {
@@ -109,26 +134,6 @@ export interface CheckOutRequest {
   work_summary?: string;
   latitude?: number;
   longitude?: number;
-}
-
-export interface AttendanceRule {
-  id: number;
-  name: string;
-  description?: string;
-  rule_type: string;
-  parameters: {
-    start_time?: string;
-    end_time?: string;
-    late_threshold_minutes?: number;
-    early_departure_threshold_minutes?: number;
-    break_duration_minutes?: number;
-    required_work_hours?: number;
-    weekend_work_allowed?: boolean;
-    remote_work_allowed?: boolean;
-  };
-  is_active: boolean;
-  created_at: string;
-  updated_at: string;
 }
 
 export interface AttendanceReport {
@@ -289,7 +294,7 @@ export class OrganizationService {
   }
 
   // Attendance Rule Methods
-  createAttendanceRule(rule: Partial<AttendanceRule>): Observable<AttendanceRule> {
+  createAttendanceRule(rule: AttendanceRuleCreate): Observable<AttendanceRule> {
     return this.http.post<AttendanceRule>(`${this.API_URL}/attendance-rules`, rule, { headers: this.getAuthHeaders() })
       .pipe(catchError(this.handleError));
   }
@@ -299,7 +304,7 @@ export class OrganizationService {
       .pipe(catchError(this.handleError));
   }
 
-  updateAttendanceRule(id: number, rule: Partial<AttendanceRule>): Observable<AttendanceRule> {
+  updateAttendanceRule(id: number, rule: AttendanceRuleUpdate): Observable<AttendanceRule> {
     return this.http.put<AttendanceRule>(`${this.API_URL}/attendance-rules/${id}`, rule, { headers: this.getAuthHeaders() })
       .pipe(catchError(this.handleError));
   }
@@ -352,15 +357,8 @@ export class OrganizationService {
   // Geolocation Utilities
   getCurrentLocation(): Promise<{latitude: number, longitude: number}> {
     return new Promise((resolve, reject) => {
-      // Mock GPS coordinates for development (when GPS is not working)
-      const mockLocation = {
-        latitude: 14.4426,  // San Francisco coordinates as example
-        longitude: 79.9865
-      };
-      
       if (!navigator.geolocation) {
-        console.warn('Geolocation not supported, using mock location');
-        resolve(mockLocation);
+        reject(new Error('Geolocation is not supported by this browser'));
         return;
       }
 
@@ -372,13 +370,26 @@ export class OrganizationService {
           });
         },
         (error) => {
-          console.warn(`Geolocation error: ${error.message}, using mock location`);
-          resolve(mockLocation);
+          let errorMessage = 'Failed to get location';
+          switch (error.code) {
+            case error.PERMISSION_DENIED:
+              errorMessage = 'Location permission denied. Please enable location access.';
+              break;
+            case error.POSITION_UNAVAILABLE:
+              errorMessage = 'Location information is unavailable.';
+              break;
+            case error.TIMEOUT:
+              errorMessage = 'Location request timed out.';
+              break;
+            default:
+              errorMessage = `Location error: ${error.message}`;
+          }
+          reject(new Error(errorMessage));
         },
         {
           enableHighAccuracy: true,
-          timeout: 5000,  // Reduced timeout to fail faster to mock
-          maximumAge: 60000
+          timeout: 10000,  // 10 seconds timeout
+          maximumAge: 30000  // Accept cached position up to 30 seconds old
         }
       );
     });

@@ -1,162 +1,267 @@
 <div class="attendance-rules">
-  <!-- Header Section -->
-  <div class="header-section">
-    <div class="title-area">
-      <h1>Attendance Rules</h1>
-      <p class="subtitle">Configure attendance policies and work hour requirements</p>
+  <!-- Modern Header Section -->
+  <header class="page-header">
+    <div class="header-content">
+      <div class="header-text">
+        <h1 class="page-title">
+          <i class="icon-rules"></i>
+          Attendance Rules
+        </h1>
+        <p class="page-subtitle">Configure and manage attendance policies for your organization</p>
+      </div>
+      
+      <div class="header-actions" *ngIf="isAdmin">
+        <button 
+          class="btn btn-primary btn-modern"
+          (click)="openCreateModal()"
+          [disabled]="isLoading">
+          <i class="icon-plus"></i>
+          <span>Create Rule</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Modern Alert Messages -->
+  <div class="alert-container" *ngIf="successMessage || errorMessage">
+    <div class="alert alert-success" *ngIf="successMessage">
+      <div class="alert-icon">
+        <i class="icon-check-circle"></i>
+      </div>
+      <div class="alert-content">
+        <span class="alert-title">Success!</span>
+        <p class="alert-message">{{ successMessage }}</p>
+      </div>
+      <button class="alert-close" (click)="successMessage = ''">
+        <i class="icon-close"></i>
+      </button>
     </div>
     
-    <div class="actions-area" *ngIf="isAdmin">
-      <button 
-        class="btn btn-primary"
-        (click)="openCreateModal()"
-        [disabled]="isLoading">
-        <i class="icon-plus"></i>
-        Add Rule
+    <div class="alert alert-error" *ngIf="errorMessage">
+      <div class="alert-icon">
+        <i class="icon-error-circle"></i>
+      </div>
+      <div class="alert-content">
+        <span class="alert-title">Error</span>
+        <p class="alert-message">{{ errorMessage }}</p>
+      </div>
+      <button class="alert-close" (click)="errorMessage = ''">
+        <i class="icon-close"></i>
       </button>
     </div>
   </div>
 
-  <!-- Alert Messages -->
-  <div class="alert alert-success" *ngIf="successMessage">
-    <i class="icon-check"></i>
-    {{ successMessage }}
-  </div>
-  
-  <div class="alert alert-error" *ngIf="errorMessage">
-    <i class="icon-error"></i>
-    {{ errorMessage }}
-  </div>
-
-  <!-- Search Section -->
-  <div class="search-section">
-    <div class="search-input">
-      <input 
-        type="text"
-        class="form-input"
-        placeholder="Search rules by name, description, or type..."
-        [(ngModel)]="searchTerm"
-        (input)="onSearchChange()">
-      <i class="icon-search"></i>
+  <!-- Modern Search Section -->
+  <section class="search-section">
+    <div class="search-container">
+      <div class="search-input-wrapper">
+        <i class="icon-search search-icon"></i>
+        <input 
+          type="text"
+          class="search-input"
+          placeholder="Search rules by name, type, or description..."
+          [(ngModel)]="searchTerm"
+          (input)="onSearchChange()">
+        <button class="search-clear" *ngIf="searchTerm" (click)="searchTerm = ''; onSearchChange()">
+          <i class="icon-close"></i>
+        </button>
+      </div>
+      <div class="search-stats" *ngIf="!isLoading">
+        <span class="stats-text">{{ filteredRules.length }} of {{ rules.length }} rules</span>
+      </div>
     </div>
-  </div>
+  </section>
 
-  <!-- Loading State -->
-  <div class="loading-state" *ngIf="isLoading">
-    <div class="spinner"></div>
-    <p>Loading attendance rules...</p>
-  </div>
+  <!-- Modern Loading State -->
+  <section class="loading-section" *ngIf="isLoading">
+    <div class="loading-container">
+      <div class="loading-spinner"></div>
+      <h3 class="loading-title">Loading Attendance Rules</h3>
+      <p class="loading-subtitle">Please wait while we fetch your rules...</p>
+    </div>
+  </section>
 
-  <!-- Rules Grid -->
-  <div class="rules-grid" *ngIf="!isLoading">
-    <div class="rule-card" 
-         *ngFor="let rule of filteredRules; trackBy: trackByRule"
-         [class.inactive]="!rule.is_active">
-      
-      <div class="rule-header">
-        <div class="rule-title">
-          <h3>{{ rule.name }}</h3>
-          <span class="rule-type-badge">{{ getRuleTypeDisplay(rule.rule_type) }}</span>
-        </div>
+  <!-- Modern Rules Grid -->
+  <section class="rules-section" *ngIf="!isLoading">
+    <div class="rules-grid" *ngIf="filteredRules.length > 0">
+      <article class="rule-card" 
+               *ngFor="let rule of filteredRules; trackBy: trackByRule"
+               [class.inactive]="!rule.is_active"
+               [class.featured]="rule.is_active">
         
-        <div class="rule-actions" *ngIf="isAdmin">
-          <button 
-            class="btn btn-icon"
-            [class]="rule.is_active ? 'btn-warning' : 'btn-success'"
-            (click)="toggleRuleStatus(rule)"
-            [title]="rule.is_active ? 'Deactivate Rule' : 'Activate Rule'">
-            <i [class]="rule.is_active ? 'icon-pause' : 'icon-play'"></i>
-          </button>
-          <button 
-            class="btn btn-icon btn-edit"
-            (click)="openEditModal(rule)"
-            title="Edit Rule">
-            <i class="icon-edit"></i>
-          </button>
-          <button 
-            class="btn btn-icon btn-delete"
-            (click)="deleteRule(rule)"
-            title="Delete Rule">
-            <i class="icon-delete"></i>
-          </button>
-        </div>
-      </div>
-
-      <div class="rule-content">
-        <div class="rule-description" *ngIf="rule.description">
-          <p>{{ rule.description }}</p>
-        </div>
-
-        <div class="rule-parameters">
-          <div class="parameter-grid" *ngIf="rule.parameters">
-            <div class="parameter-item" *ngIf="rule.parameters.start_time">
-              <label>Start Time</label>
-              <span>{{ rule.parameters.start_time }}</span>
+        <div class="card-header">
+          <div class="card-title-section">
+            <div class="title-content">
+              <h3 class="rule-name">{{ rule.rule_name }}</h3>
+              <div class="rule-meta">
+                <span class="rule-type-badge badge-work_hours">
+                  <i class="icon-rule-type"></i>
+                  Work Hours
+                </span>
+                <span class="rule-status-indicator" [class]="rule.is_active ? 'active' : 'inactive'">
+                  <span class="status-dot"></span>
+                  {{ rule.is_active ? 'Active' : 'Inactive' }}
+                </span>
+              </div>
             </div>
-            <div class="parameter-item" *ngIf="rule.parameters.end_time">
-              <label>End Time</label>
-              <span>{{ rule.parameters.end_time }}</span>
-            </div>
-            <div class="parameter-item" *ngIf="rule.parameters.required_work_hours">
-              <label>Required Hours</label>
-              <span>{{ rule.parameters.required_work_hours }}h</span>
-            </div>
-            <div class="parameter-item" *ngIf="rule.parameters.late_threshold_minutes">
-              <label>Late Threshold</label>
-              <span>{{ rule.parameters.late_threshold_minutes }} min</span>
-            </div>
-            <div class="parameter-item" *ngIf="rule.parameters.break_duration_minutes">
-              <label>Break Duration</label>
-              <span>{{ rule.parameters.break_duration_minutes }} min</span>
+            
+            <div class="card-actions" *ngIf="isAdmin">
+              <div class="action-buttons">
+                <button 
+                  class="btn btn-icon btn-modern"
+                  [class]="rule.is_active ? 'btn-warning' : 'btn-success'"
+                  (click)="toggleRuleStatus(rule)"
+                  [title]="rule.is_active ? 'Deactivate Rule' : 'Activate Rule'"
+                  [attr.aria-label]="rule.is_active ? 'Deactivate Rule' : 'Activate Rule'">
+                  <i [class]="rule.is_active ? 'icon-pause' : 'icon-play'"></i>
+                </button>
+                <button 
+                  class="btn btn-icon btn-modern btn-edit"
+                  (click)="openEditModal(rule)"
+                  title="Edit Rule"
+                  aria-label="Edit Rule">
+                  <i class="icon-edit"></i>
+                </button>
+                <button 
+                  class="btn btn-icon btn-modern btn-delete"
+                  (click)="deleteRule(rule)"
+                  title="Delete Rule"
+                  aria-label="Delete Rule">
+                  <i class="icon-delete"></i>
+                </button>
+              </div>
             </div>
           </div>
+        </div>
 
-          <div class="rule-flags" *ngIf="rule.parameters">
-            <span class="flag" *ngIf="rule.parameters.weekend_work_allowed" class="flag-success">
-              <i class="icon-check"></i> Weekend Work
-            </span>
-            <span class="flag" *ngIf="rule.parameters.remote_work_allowed" class="flag-info">
-              <i class="icon-home"></i> Remote Work
-            </span>
+        <div class="card-body">
+          <div class="rule-description" *ngIf="rule.work_days">
+            <p class="description-text">
+              <strong>Work Days:</strong> 
+              <span *ngIf="rule.work_days.endsWith('_alt')">
+                Weekdays + Alternate Saturdays (1st, 3rd, 5th)
+              </span>
+              <span *ngIf="!rule.work_days.endsWith('_alt')">
+                {{ getWorkDaysDisplay(rule.work_days) }}
+              </span>
+            </p>
+          </div>
+
+          <div class="rule-parameters">
+            <div class="parameters-grid">
+              <div class="parameter-card">
+                <div class="parameter-icon">
+                  <i class="icon-time"></i>
+                </div>
+                <div class="parameter-content">
+                  <label class="parameter-label">Start Time</label>
+                  <span class="parameter-value">{{ rule.start_time }}</span>
+                </div>
+              </div>
+              
+              <div class="parameter-card">
+                <div class="parameter-icon">
+                  <i class="icon-time-end"></i>
+                </div>
+                <div class="parameter-content">
+                  <label class="parameter-label">End Time</label>
+                  <span class="parameter-value">{{ rule.end_time }}</span>
+                </div>
+              </div>
+              
+              <div class="parameter-card">
+                <div class="parameter-icon">
+                  <i class="icon-hours"></i>
+                </div>
+                <div class="parameter-content">
+                  <label class="parameter-label">Half Day Hours</label>
+                  <span class="parameter-value">{{ rule.half_day_threshold_hours }}h</span>
+                </div>
+              </div>
+              
+              <div class="parameter-card">
+                <div class="parameter-icon">
+                  <i class="icon-late"></i>
+                </div>
+                <div class="parameter-content">
+                  <label class="parameter-label">Late Threshold</label>
+                  <span class="parameter-value">{{ rule.late_threshold_minutes }} min</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="rule-features">
+              <div class="features-list">
+                <span class="feature-badge" *ngIf="rule.work_days.includes('6') || rule.work_days.includes('7')" class="feature-success">
+                  <i class="icon-weekend"></i>
+                  <span>Weekend Work</span>
+                </span>
+                <span class="feature-badge" class="feature-info">
+                  <i class="icon-remote"></i>
+                  <span>Office Work</span>
+                </span>
+              </div>
+            </div>
           </div>
         </div>
 
-        <div class="rule-status">
-          <span class="status-badge" [class]="getRuleStatusClass(rule)">
-            {{ rule.is_active ? 'Active' : 'Inactive' }}
-          </span>
+        <div class="card-footer">
+          <div class="footer-content">
+            <div class="rule-stats">
+              <span class="stat-item">
+                <i class="icon-calendar"></i>
+                <span>Last updated: {{ rule.updated_at | date:'short' }}</span>
+              </span>
+            </div>
+          </div>
         </div>
-      </div>
+      </article>
     </div>
 
-    <!-- Empty State -->
+    <!-- Modern Empty State -->
     <div class="empty-state" *ngIf="filteredRules.length === 0">
-      <div class="empty-icon">
-        <i class="icon-rules"></i>
+      <div class="empty-container">
+        <div class="empty-illustration">
+          <i class="icon-empty-rules"></i>
+        </div>
+        <div class="empty-content">
+          <h3 class="empty-title">
+            {{ searchTerm ? 'No rules found' : 'No attendance rules yet' }}
+          </h3>
+          <p class="empty-description" *ngIf="searchTerm">
+            Try adjusting your search terms or create a new rule.
+          </p>
+          <p class="empty-description" *ngIf="!searchTerm">
+            Create your first attendance rule to establish work policies and guidelines.
+          </p>
+          <div class="empty-actions" *ngIf="isAdmin && !searchTerm">
+            <button 
+              class="btn btn-primary btn-modern"
+              (click)="openCreateModal()">
+              <i class="icon-plus"></i>
+              <span>Create First Rule</span>
+            </button>
+          </div>
+        </div>
       </div>
-      <h3>No attendance rules found</h3>
-      <p *ngIf="searchTerm">
-        Try adjusting your search terms.
-      </p>
-      <p *ngIf="!searchTerm">
-        Create your first attendance rule to establish work policies.
-      </p>
-      <button 
-        class="btn btn-primary"
-        (click)="openCreateModal()"
-        *ngIf="isAdmin && !searchTerm">
-        Create First Rule
-      </button>
     </div>
-  </div>
+  </section>
 </div>
 
-<!-- Modal for Create/Edit Rule -->
+<!-- Modern Modal for Create/Edit Rule -->
 <div class="modal-overlay" *ngIf="isModalOpen" (click)="closeModal()">
   <div class="modal-container" (click)="$event.stopPropagation()">
     <div class="modal-header">
-      <h2>{{ editingRule ? 'Edit Attendance Rule' : 'Add Attendance Rule' }}</h2>
-      <button class="btn btn-icon btn-close" (click)="closeModal()">
+      <div class="modal-title">
+        <h2 class="modal-heading">
+          <i class="icon-rule-edit"></i>
+          {{ editingRule ? 'Edit Attendance Rule' : 'Create New Rule' }}
+        </h2>
+        <p class="modal-subtitle">
+          {{ editingRule ? 'Update the attendance rule settings' : 'Configure a new attendance policy' }}
+        </p>
+      </div>
+      <button class="btn btn-icon btn-modern btn-close" (click)="closeModal()" aria-label="Close modal">
         <i class="icon-close"></i>
       </button>
     </div>
@@ -164,172 +269,257 @@
     <form [formGroup]="ruleForm" (ngSubmit)="onSubmit()" class="modal-form">
       <div class="modal-body">
         <div class="form-sections">
-          <!-- Basic Information -->
-          <div class="form-section">
-            <h3>Basic Information</h3>
-            
-            <div class="form-group">
-              <label for="name">Rule Name *</label>
-              <input 
-                type="text"
-                id="name"
-                class="form-input"
-                formControlName="name"
-                placeholder="e.g., Standard Work Hours"
-                [class.error]="isFieldInvalid('name')">
-              <div class="error-message" *ngIf="isFieldInvalid('name')">
-                {{ getFieldError('name') }}
-              </div>
+          <!-- Basic Information Section -->
+          <section class="form-section">
+            <div class="section-header">
+              <h3 class="section-title">
+                <i class="icon-info"></i>
+                Basic Information
+              </h3>
+              <p class="section-description">Define the rule name and basic settings</p>
             </div>
             
-            <div class="form-group">
-              <label for="rule_type">Rule Type *</label>
-              <select 
-                id="rule_type"
-                class="form-select"
-                formControlName="rule_type"
-                [class.error]="isFieldInvalid('rule_type')">
-                <option value="work_hours">Work Hours</option>
-                <option value="break_policy">Break Policy</option>
-                <option value="overtime">Overtime Rules</option>
-                <option value="location_based">Location Based</option>
-                <option value="flexible">Flexible Hours</option>
-              </select>
-              <div class="error-message" *ngIf="isFieldInvalid('rule_type')">
-                {{ getFieldError('rule_type') }}
-              </div>
-            </div>
-            
-            <div class="form-group">
-              <label for="description">Description</label>
-              <textarea 
-                id="description"
-                class="form-textarea"
-                formControlName="description"
-                placeholder="Optional description of the attendance rule"
-                rows="3"></textarea>
-            </div>
-            
-            <div class="form-group">
-              <div class="checkbox-wrapper">
-                <input 
-                  type="checkbox"
-                  id="is_active"
-                  class="form-checkbox"
-                  formControlName="is_active">
-                <label for="is_active" class="checkbox-label">
-                  Active Rule
+            <div class="form-fields">
+              <div class="form-group">
+                <label for="rule_name" class="form-label">
+                  Rule Name <span class="required">*</span>
                 </label>
+                <input 
+                  type="text"
+                  id="rule_name"
+                  class="form-input"
+                  formControlName="rule_name"
+                  placeholder="e.g., Standard Work Hours"
+                  [class.error]="isFieldInvalid('rule_name')">
+                <div class="error-message" *ngIf="isFieldInvalid('rule_name')">
+                  <i class="icon-error"></i>
+                  {{ getFieldError('rule_name') }}
+                </div>
+              </div>
+              
+              <div class="form-group">
+                <label for="work_days" class="form-label">
+                  Work Days <span class="required">*</span>
+                </label>
+                <select 
+                  id="work_days"
+                  class="form-select"
+                  formControlName="work_days"
+                  (change)="onWorkDaysChange($event)"
+                  [class.error]="isFieldInvalid('work_days')">
+                  <option value="1,2,3,4,5">Weekdays Only (Monday - Friday)</option>
+                  <option value="1,2,3,4,5,6">Weekdays + Saturday</option>
+                  <option value="1,2,3,4,5,6,7">Every Day (Monday - Sunday)</option>
+                  <option value="1,2,3,4,5,7">Weekdays + Sunday</option>
+                  <option value="alternate_saturdays">Alternate Saturdays (1st, 3rd, 5th)</option>
+                  <option value="custom">Custom Work Days</option>
+                </select>
+                <div class="error-message" *ngIf="isFieldInvalid('work_days')">
+                  <i class="icon-error"></i>
+                  {{ getFieldError('work_days') }}
+                </div>
+              </div>
+
+              <!-- Custom Work Days Input (shown when "Custom" is selected) -->
+              <div class="form-group" *ngIf="showCustomWorkDays">
+                <label for="custom_work_days" class="form-label">
+                  Custom Work Days <span class="required">*</span>
+                </label>
+                <div class="custom-work-days-container">
+                  <div class="work-days-checkboxes">
+                    <div class="checkbox-wrapper">
+                      <input 
+                        type="checkbox"
+                        id="day_1"
+                        class="form-checkbox"
+                        [checked]="customWorkDays.includes('1')"
+                        (change)="toggleWorkDay('1', $event)">
+                      <label for="day_1" class="checkbox-label">
+                        <span class="checkbox-custom"></span>
+                        <span class="checkbox-text">Monday</span>
+                      </label>
+                    </div>
+                    <div class="checkbox-wrapper">
+                      <input 
+                        type="checkbox"
+                        id="day_2"
+                        class="form-checkbox"
+                        [checked]="customWorkDays.includes('2')"
+                        (change)="toggleWorkDay('2', $event)">
+                      <label for="day_2" class="checkbox-label">
+                        <span class="checkbox-custom"></span>
+                        <span class="checkbox-text">Tuesday</span>
+                      </label>
+                    </div>
+                    <div class="checkbox-wrapper">
+                      <input 
+                        type="checkbox"
+                        id="day_3"
+                        class="form-checkbox"
+                        [checked]="customWorkDays.includes('3')"
+                        (change)="toggleWorkDay('3', $event)">
+                      <label for="day_3" class="checkbox-label">
+                        <span class="checkbox-custom"></span>
+                        <span class="checkbox-text">Wednesday</span>
+                      </label>
+                    </div>
+                    <div class="checkbox-wrapper">
+                      <input 
+                        type="checkbox"
+                        id="day_4"
+                        class="form-checkbox"
+                        [checked]="customWorkDays.includes('4')"
+                        (change)="toggleWorkDay('4', $event)">
+                      <label for="day_4" class="checkbox-label">
+                        <span class="checkbox-custom"></span>
+                        <span class="checkbox-text">Thursday</span>
+                      </label>
+                    </div>
+                    <div class="checkbox-wrapper">
+                      <input 
+                        type="checkbox"
+                        id="day_5"
+                        class="form-checkbox"
+                        [checked]="customWorkDays.includes('5')"
+                        (change)="toggleWorkDay('5', $event)">
+                      <label for="day_5" class="checkbox-label">
+                        <span class="checkbox-custom"></span>
+                        <span class="checkbox-text">Friday</span>
+                      </label>
+                    </div>
+                    <div class="checkbox-wrapper">
+                      <input 
+                        type="checkbox"
+                        id="day_6"
+                        class="form-checkbox"
+                        [checked]="customWorkDays.includes('6')"
+                        (change)="toggleWorkDay('6', $event)">
+                      <label for="day_6" class="checkbox-label">
+                        <span class="checkbox-custom"></span>
+                        <span class="checkbox-text">Saturday</span>
+                      </label>
+                    </div>
+                    <div class="checkbox-wrapper">
+                      <input 
+                        type="checkbox"
+                        id="day_7"
+                        class="form-checkbox"
+                        [checked]="customWorkDays.includes('7')"
+                        (change)="toggleWorkDay('7', $event)">
+                      <label for="day_7" class="checkbox-label">
+                        <span class="checkbox-custom"></span>
+                        <span class="checkbox-text">Sunday</span>
+                      </label>
+                    </div>
+                  </div>
+                  <div class="custom-work-days-info">
+                    <p class="info-text">Selected days: {{ getCustomWorkDaysDisplay() }}</p>
+                  </div>
+                </div>
+              </div>
+              
+              <div class="form-group">
+                <div class="checkbox-wrapper">
+                  <input 
+                    type="checkbox"
+                    id="is_active"
+                    class="form-checkbox"
+                    formControlName="is_active">
+                  <label for="is_active" class="checkbox-label">
+                    <span class="checkbox-custom"></span>
+                    <span class="checkbox-text">Active Rule</span>
+                  </label>
+                </div>
               </div>
             </div>
-          </div>
+          </section>
           
-          <!-- Rule Parameters -->
-          <div class="form-section" formGroupName="parameters">
-            <h3>Rule Parameters</h3>
-            
-            <div class="form-grid">
-              <div class="form-group">
-                <label for="start_time">Start Time *</label>
-                <input 
-                  type="time"
-                  id="start_time"
-                  class="form-input"
-                  formControlName="start_time">
-              </div>
-              
-              <div class="form-group">
-                <label for="end_time">End Time *</label>
-                <input 
-                  type="time"
-                  id="end_time"
-                  class="form-input"
-                  formControlName="end_time">
-              </div>
-              
-              <div class="form-group">
-                <label for="required_work_hours">Required Work Hours *</label>
-                <input 
-                  type="number"
-                  id="required_work_hours"
-                  class="form-input"
-                  formControlName="required_work_hours"
-                  min="1"
-                  max="24">
-              </div>
-              
-              <div class="form-group">
-                <label for="late_threshold_minutes">Late Threshold (minutes) *</label>
-                <input 
-                  type="number"
-                  id="late_threshold_minutes"
-                  class="form-input"
-                  formControlName="late_threshold_minutes"
-                  min="0">
-              </div>
-              
-              <div class="form-group">
-                <label for="early_departure_threshold_minutes">Early Departure Threshold (minutes) *</label>
-                <input 
-                  type="number"
-                  id="early_departure_threshold_minutes"
-                  class="form-input"
-                  formControlName="early_departure_threshold_minutes"
-                  min="0">
-              </div>
-              
-              <div class="form-group">
-                <label for="break_duration_minutes">Break Duration (minutes) *</label>
-                <input 
-                  type="number"
-                  id="break_duration_minutes"
-                  class="form-input"
-                  formControlName="break_duration_minutes"
-                  min="0">
-              </div>
+          <!-- Time Settings Section -->
+          <section class="form-section">
+            <div class="section-header">
+              <h3 class="section-title">
+                <i class="icon-settings"></i>
+                Time Settings
+              </h3>
+              <p class="section-description">Configure work hours and thresholds</p>
             </div>
             
-            <div class="form-checkboxes">
-              <div class="checkbox-wrapper">
-                <input 
-                  type="checkbox"
-                  id="weekend_work_allowed"
-                  class="form-checkbox"
-                  formControlName="weekend_work_allowed">
-                <label for="weekend_work_allowed" class="checkbox-label">
-                  Allow Weekend Work
-                </label>
-              </div>
-              
-              <div class="checkbox-wrapper">
-                <input 
-                  type="checkbox"
-                  id="remote_work_allowed"
-                  class="form-checkbox"
-                  formControlName="remote_work_allowed">
-                <label for="remote_work_allowed" class="checkbox-label">
-                  Allow Remote Work
-                </label>
+            <div class="form-fields">
+              <div class="form-grid">
+                <div class="form-group">
+                  <label for="start_time" class="form-label">
+                    Start Time <span class="required">*</span>
+                  </label>
+                  <input 
+                    type="time"
+                    id="start_time"
+                    class="form-input"
+                    formControlName="start_time">
+                </div>
+                
+                <div class="form-group">
+                  <label for="end_time" class="form-label">
+                    End Time <span class="required">*</span>
+                  </label>
+                  <input 
+                    type="time"
+                    id="end_time"
+                    class="form-input"
+                    formControlName="end_time">
+                </div>
+                
+                <div class="form-group">
+                  <label for="late_threshold_minutes" class="form-label">
+                    Late Threshold (minutes) <span class="required">*</span>
+                  </label>
+                  <input 
+                    type="number"
+                    id="late_threshold_minutes"
+                    class="form-input"
+                    formControlName="late_threshold_minutes"
+                    min="0"
+                    placeholder="15">
+                </div>
+                
+                <div class="form-group">
+                  <label for="half_day_threshold_hours" class="form-label">
+                    Half Day Threshold (hours) <span class="required">*</span>
+                  </label>
+                  <input 
+                    type="number"
+                    id="half_day_threshold_hours"
+                    class="form-input"
+                    formControlName="half_day_threshold_hours"
+                    min="1"
+                    max="12"
+                    placeholder="4">
+                </div>
               </div>
             </div>
-          </div>
+          </section>
         </div>
       </div>
       
       <div class="modal-footer">
-        <button 
-          type="button"
-          class="btn btn-secondary"
-          (click)="closeModal()">
-          Cancel
-        </button>
-        <button 
-          type="submit"
-          class="btn btn-primary"
-          [disabled]="ruleForm.invalid || isLoading">
-          <span *ngIf="isLoading" class="spinner-sm"></span>
-          {{ editingRule ? 'Update Rule' : 'Create Rule' }}
-        </button>
+        <div class="footer-actions">
+          <button 
+            type="button"
+            class="btn btn-secondary btn-modern"
+            (click)="closeModal()">
+            <i class="icon-cancel"></i>
+            <span>Cancel</span>
+          </button>
+          <button 
+            type="submit"
+            class="btn btn-primary btn-modern"
+            [disabled]="ruleForm.invalid || isLoading">
+            <span class="btn-content">
+              <span class="spinner-sm" *ngIf="isLoading"></span>
+              <i [class]="editingRule ? 'icon-update' : 'icon-create'"></i>
+              <span>{{ editingRule ? 'Update Rule' : 'Create Rule' }}</span>
+            </span>
+          </button>
+        </div>
       </div>
     </form>
   </div>
